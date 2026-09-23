@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ERIODR CAMERA AI — Cinematic 3D Camera AI Studio</title>
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Three.js 3D Engine -->
+  <!-- Three.js for 3D Camera Simulation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -61,9 +61,6 @@
     input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
     .glow-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.25); }
-    .glow-pink { box-shadow: 0 0 15px rgba(255, 0, 122, 0.25); }
-    .glow-green { box-shadow: 0 0 15px rgba(0, 255, 136, 0.25); }
-
     #viewportCanvasContainer { position: relative; touch-action: none; overflow: hidden; }
     #toastContainer { pointer-events: none; }
     .toast-item { pointer-events: auto; animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -75,6 +72,18 @@
 </head>
 <body class="bg-background text-gray-200 font-sans min-h-screen flex flex-col antialiased selection:bg-accentCyan/20 selection:text-accentCyan">
 
+  <!-- TOP BANNER JIKA API KEY KOSONG -->
+  <div id="apiKeyBanner" class="hidden bg-gradient-to-r from-red-600/90 via-panel to-panel border-b border-red-500/40 px-4 py-2 text-xs flex items-center justify-between text-white z-50">
+    <div class="flex items-center space-x-2">
+      <span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span>
+      <span class="font-medium">Google AI Studio API Key belum dipasang. Diperlukan untuk render model Gemini Image.</span>
+    </div>
+    <button onclick="openApiKeyModal()" class="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded font-mono text-[11px] font-semibold transition">
+      Pasang Key Sekarang
+    </button>
+  </div>
+
+  <!-- HEADER -->
   <header class="h-16 border-b border-panelBorder bg-panel/90 backdrop-blur-md sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between">
     <div class="flex items-center space-x-6">
       <div class="flex items-center space-x-3 cursor-pointer" onclick="switchMainTab('workspace')">
@@ -116,44 +125,29 @@
       </nav>
     </div>
 
-    <!-- Right Controls: Google AI Studio Key Button & System Status -->
+    <!-- Right Controls: Status & Engine -->
     <div class="flex items-center space-x-3">
-      <button onclick="openApiKeyModal()" id="headerApiKeyBtn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono transition shadow-sm bg-accentGreen/10 border-accentGreen/30 text-accentGreen hover:bg-accentGreen/20">
-        <span class="w-2 h-2 rounded-full bg-accentGreen" id="apiKeyStatusDot"></span>
-        <span id="apiKeyStatusText">AI Studio: Active</span>
-        <svg class="w-3.5 h-3.5 ml-0.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+      <button onclick="openApiKeyModal()" id="apiKeyBadgeBtn" class="flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-mono transition">
+        <span id="apiKeyDot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span id="apiKeyStatusLabel" class="font-medium text-[11px]">AI Studio: Set Key</span>
       </button>
-
-      <div class="hidden lg:flex items-center space-x-2 bg-background/80 px-3 py-1.5 rounded-xl border border-panelBorder text-xs">
+      <div class="hidden sm:flex items-center space-x-2 bg-background/80 px-3 py-1.5 rounded-xl border border-panelBorder text-xs">
         <span class="text-gray-400 font-mono">Engine:</span>
-        <span class="text-accentCyan font-mono font-semibold" id="activeModelBadge">gemini-3.1-flash-image</span>
+        <span class="text-accentCyan font-mono font-semibold" id="activeEngineBadge">gemini-2.5-flash-image</span>
       </div>
-      <div class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-accentGreen/10 border border-accentGreen/30 text-accentGreen text-xs">
+      <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-accentGreen/10 border border-accentGreen/30 text-accentGreen text-xs">
         <span class="w-2 h-2 rounded-full bg-accentGreen animate-pulse"></span>
         <span class="font-medium text-[11px] tracking-wide" id="systemStatusText">Ready</span>
       </div>
     </div>
   </header>
 
-  <!-- QUOTA ALERT NOTICE BANNER (Dynamically shown if free-tier rate limit occurs) -->
-  <div id="quotaWarningBanner" class="hidden bg-amber-950/80 border-b border-amber-500/40 px-4 py-2 text-xs flex items-center justify-between text-amber-200 z-30">
-    <div class="flex items-center space-x-2">
-      <span class="text-amber-400 font-bold">⚠️ Mode Fallback:</span>
-      <span id="quotaWarningMsg">Kuota Free-tier Google AI Studio sedang limit. Sistem mengalihkan model alternatif atau mode simulasi interaktif.</span>
-    </div>
-    <button onclick="openApiKeyModal()" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500 hover:text-black font-mono text-[11px] transition">
-      Ganti API Key
-    </button>
-  </div>
-
+  <!-- MAIN WORKSPACE -->
   <main class="flex-1 overflow-hidden flex flex-col">
-    <!-- VIEW: STUDIO WORKSPACE -->
     <div id="viewWorkspace" class="flex-1 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-0">
       
-      <!-- LEFT COLUMN: 3D Camera Rig & Photographic Controls (Col 1 to 6) -->
+      <!-- LEFT: 3D RIG -->
       <section class="lg:col-span-6 border-r border-panelBorder flex flex-col h-full bg-panel overflow-y-auto">
-        
-        <!-- SECTION TITLE & CAMERA INTERPRETER COMMAND BAR -->
         <div class="p-4 border-b border-panelBorder bg-background/40">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center space-x-2">
@@ -161,7 +155,6 @@
               <h2 class="text-xs uppercase font-bold tracking-wider text-white">3D Camera Viewport</h2>
             </div>
             <div class="flex items-center space-x-2">
-              <!-- 3D Subject Archetype Switcher -->
               <div class="flex items-center space-x-1.5 bg-background border border-panelBorder px-2 py-0.5 rounded-lg">
                 <span class="text-[10px] text-gray-400 font-mono">3D Subject:</span>
                 <select id="subjectArchetypeSelect" onchange="changeSubjectArchetype(this.value)" class="bg-transparent text-[11px] text-accentCyan font-medium focus:outline-none cursor-pointer">
@@ -176,35 +169,28 @@
                   <option value="animal">🐾 Animal / Creature</option>
                 </select>
               </div>
-              <button onclick="resetCameraToDefault()" class="text-[11px] px-2 py-0.5 rounded bg-panelBorder text-gray-300 hover:text-white hover:bg-gray-700 transition">
-                Reset Rig
-              </button>
-              <button onclick="toggleGridWireframe()" class="text-[11px] px-2 py-0.5 rounded bg-panelBorder text-gray-300 hover:text-white hover:bg-gray-700 transition" id="btnToggleGrid">
-                Grid: On
-              </button>
+              <button onclick="resetCameraToDefault()" class="text-[11px] px-2 py-0.5 rounded bg-panelBorder text-gray-300 hover:text-white hover:bg-gray-700 transition">Reset Rig</button>
+              <button onclick="toggleGridWireframe()" class="text-[11px] px-2 py-0.5 rounded bg-panelBorder text-gray-300 hover:text-white hover:bg-gray-700 transition" id="btnToggleGrid">Grid: On</button>
             </div>
           </div>
 
-          <!-- Natural Language Camera Command Bar -->
           <div class="relative mt-2">
             <div class="flex items-center bg-background border border-panelBorder rounded-xl overflow-hidden focus-within:border-accentCyan/70 transition glow-cyan/10">
               <span class="pl-3 text-accentCyan text-sm">✨</span>
-              <input type="text" id="cameraNaturalInput" placeholder="Command: 'Top-down flat lay for food' or 'Low 3/4 angle for sports car' or 'ambil dari samping close up botol parfum'..." 
+              <input type="text" id="cameraNaturalInput" placeholder="Command: 'Top-down flat lay for food' or 'Low 3/4 angle for sports car'..." 
                 class="w-full bg-transparent px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none" 
                 onkeydown="if(event.key==='Enter') interpretNaturalCameraCommand()">
               <button onclick="interpretNaturalCameraCommand()" class="px-3 py-2 text-[11px] font-semibold bg-accentCyan/20 text-accentCyan hover:bg-accentCyan hover:text-black transition flex items-center space-x-1 whitespace-nowrap">
                 <span>Apply</span>
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 3D VIEWPORT CANVAS -->
+        <!-- 3D CANVAS -->
         <div id="viewportCanvasContainer" class="w-full h-72 sm:h-80 md:h-96 bg-[#08080C] relative border-b border-panelBorder select-none">
           <canvas id="camera3dCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
 
-          <!-- Overlay Viewport Telemetry HUD -->
           <div class="absolute top-3 left-3 pointer-events-none flex flex-col space-y-1">
             <div class="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-gray-300 flex items-center space-x-2">
               <span class="text-accentCyan font-bold">AZM:</span> <span id="hudAzimuth">0°</span>
@@ -220,17 +206,6 @@
             </div>
           </div>
 
-          <!-- Viewport Interactive Legend -->
-          <div class="absolute bottom-3 left-3 pointer-events-none">
-            <div class="flex items-center space-x-2 text-[9px] font-mono bg-black/60 backdrop-blur-sm px-2 py-1 rounded border border-white/10 text-gray-400">
-              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-accentGreen inline-block"></span><span>Orbit</span></span>
-              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-accentPink inline-block"></span><span>Elev.</span></span>
-              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-accentCyan inline-block"></span><span>Camera</span></span>
-              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-accentOrange inline-block"></span><span>Sightline</span></span>
-            </div>
-          </div>
-
-          <!-- Drag Viewport Hint -->
           <div class="absolute bottom-3 right-3 pointer-events-none">
             <div class="text-[10px] text-gray-400 bg-black/70 px-2.5 py-1 rounded border border-white/10 flex items-center space-x-1.5 font-mono">
               <svg class="w-3.5 h-3.5 text-accentCyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
@@ -243,7 +218,7 @@
         <div class="p-4 border-b border-panelBorder">
           <div class="flex items-center justify-between mb-2">
             <span class="text-[11px] uppercase font-mono tracking-wider text-gray-400 font-semibold">Camera Angle & Subject Presets</span>
-            <span class="text-[10px] text-accentCyan cursor-pointer hover:underline" onclick="switchMainTab('presets')">View All 30+</span>
+            <span class="text-[10px] text-accentCyan cursor-pointer hover:underline" onclick="switchMainTab('presets')">View All</span>
           </div>
           
           <div class="flex flex-wrap gap-1.5" id="quickPresetContainer">
@@ -252,92 +227,51 @@
             <button onclick="applyPresetByName('Food Hero 45°')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">🍽️ Food Hero</button>
             <button onclick="applyPresetByName('Automotive 3/4 Dynamic')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">🏎️ Car 3/4 Hero</button>
             <button onclick="applyPresetByName('Jewelry Macro Luxury')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">💎 Jewelry Macro</button>
-            <button onclick="applyPresetByName('Architecture Tilt-Shift')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">🏛️ Arch Tilt-Shift</button>
             <button onclick="applyPresetByName('Front View')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">Front View</button>
             <button onclick="applyPresetByName('Low Angle')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">Low Angle</button>
             <button onclick="applyPresetByName('Close Up')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">Close Up</button>
-            <button onclick="applyPresetByName('Dutch Angle')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">Dutch Angle</button>
-            <button onclick="applyPresetByName('Cinematic')" class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-background border border-panelBorder hover:border-accentCyan/50 text-gray-300 hover:text-white transition">Cinematic</button>
           </div>
         </div>
 
+        <!-- CAMERA CONTROLS SLIDERS -->
         <div class="p-4 space-y-4">
-          
-          <!-- PARAMETERS PANEL -->
           <div class="bg-background/60 border border-panelBorder rounded-2xl p-4 space-y-4">
             <div class="flex items-center justify-between pb-2 border-b border-panelBorder">
-              <span class="text-xs uppercase font-mono font-bold tracking-wider text-accentCyan flex items-center space-x-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                <span>Camera Position & Angles</span>
-              </span>
-
-              <!-- Smart Locks -->
-              <div class="flex items-center space-x-3 text-[11px]">
-                <label class="flex items-center space-x-1 cursor-pointer text-gray-400 hover:text-white">
-                  <input type="checkbox" id="lockSubjectToggle" checked class="rounded border-panelBorder text-accentCyan focus:ring-0">
-                  <span>Lock Subject</span>
-                </label>
-                <label class="flex items-center space-x-1 cursor-pointer text-gray-400 hover:text-white">
-                  <input type="checkbox" id="lockHorizonToggle" class="rounded border-panelBorder text-accentCyan focus:ring-0">
-                  <span>Lock Horizon</span>
-                </label>
-              </div>
+              <span class="text-xs uppercase font-mono font-bold tracking-wider text-accentCyan">Camera Position & Angles</span>
             </div>
 
-            <!-- SLIDER: Azimuth -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs font-mono">
                 <span class="text-gray-300">AZIMUTH (Horizontal Orbit)</span>
                 <span id="valAzimuth" class="text-accentCyan font-bold">0°</span>
               </div>
               <input type="range" id="sliderAzimuth" min="-180" max="180" value="0" step="1" class="w-full">
-              <div class="flex justify-between text-[10px] text-gray-500 font-mono">
-                <span>-180° (Back)</span>
-                <span>-90° (Left)</span>
-                <span>0° (Front)</span>
-                <span>+90° (Right)</span>
-                <span>+180°</span>
-              </div>
             </div>
 
-            <!-- SLIDER: Elevation -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs font-mono">
                 <span class="text-gray-300">ELEVATION (Vertical Tilt)</span>
                 <span id="valElevation" class="text-accentPink font-bold">20°</span>
               </div>
               <input type="range" id="sliderElevation" min="-90" max="90" value="20" step="1" class="w-full">
-              <div class="flex justify-between text-[10px] text-gray-500 font-mono">
-                <span>-90° (Worm's Eye)</span>
-                <span>0° (Eye Level)</span>
-                <span>+90° (Bird's Eye)</span>
-              </div>
             </div>
 
-            <!-- SLIDER: Distance -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs font-mono">
-                <span class="text-gray-300">DISTANCE (Camera to Subject)</span>
+                <span class="text-gray-300">DISTANCE (Zoom)</span>
                 <span id="valDistance" class="text-accentGreen font-bold">2.5x</span>
               </div>
               <input type="range" id="sliderDistance" min="0.2" max="10" value="2.5" step="0.1" class="w-full">
-              <div class="flex justify-between text-[10px] text-gray-500 font-mono">
-                <span>0.2x (Extreme Close)</span>
-                <span>2.5x (Medium)</span>
-                <span>10.0x (Long Distance)</span>
-              </div>
             </div>
 
-            <!-- SLIDER: Roll -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs font-mono">
-                <span class="text-gray-300">ROLL (Dutch Angle Tilt)</span>
+                <span class="text-gray-300">ROLL (Tilt)</span>
                 <span id="valRoll" class="text-yellow-400 font-bold">0°</span>
               </div>
               <input type="range" id="sliderRoll" min="-180" max="180" value="0" step="1" class="w-full">
             </div>
 
-            <!-- Grid 2-cols: Camera Height & Target Height -->
             <div class="grid grid-cols-2 gap-3 pt-1">
               <div class="space-y-1">
                 <div class="flex justify-between text-[11px] font-mono">
@@ -356,48 +290,27 @@
             </div>
           </div>
 
-          <!-- OPTICS & LENS PANEL -->
+          <!-- OPTICS & LENS -->
           <div class="bg-background/60 border border-panelBorder rounded-2xl p-4 space-y-4">
             <div class="flex items-center justify-between pb-2 border-b border-panelBorder">
-              <span class="text-xs uppercase font-mono font-bold tracking-wider text-accentOrange flex items-center space-x-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line><line x1="14.83" y1="9.17" x2="18.36" y2="5.64"></line><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line></svg>
-                <span>Optics, Lens & Depth of Field</span>
-              </span>
-              
-              <div class="flex items-center space-x-2">
-                <label class="flex items-center space-x-1.5 cursor-pointer text-xs">
-                  <input type="checkbox" id="dofToggle" checked class="rounded border-panelBorder text-accentOrange focus:ring-0">
-                  <span class="text-gray-300 font-medium">DoF Enabled</span>
-                </label>
-              </div>
+              <span class="text-xs uppercase font-mono font-bold tracking-wider text-accentOrange">Optics & Lens</span>
             </div>
 
-            <!-- Focal Length & FOV linked sliders -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1">
                 <div class="flex justify-between text-xs font-mono">
                   <span class="text-gray-300">FOCAL LENGTH</span>
                   <span id="valFocalLength" class="text-accentOrange font-bold">35mm</span>
                 </div>
                 <input type="range" id="sliderFocalLength" min="14" max="200" value="35" step="1" class="w-full">
-                <div class="flex justify-between text-[9px] text-gray-500 font-mono">
-                  <span>14mm (Ultra)</span>
-                  <span>50mm (Standard)</span>
-                  <span>200mm (Tele)</span>
-                </div>
               </div>
 
               <div class="space-y-1">
                 <div class="flex justify-between text-xs font-mono">
-                  <span class="text-gray-300">FIELD OF VIEW (FOV)</span>
+                  <span class="text-gray-300">FIELD OF VIEW</span>
                   <span id="valFov" class="text-accentCyan font-bold">54°</span>
                 </div>
                 <input type="range" id="sliderFov" min="15" max="120" value="54" step="1" class="w-full">
-                <div class="flex justify-between text-[9px] text-gray-500 font-mono">
-                  <span>15° (Narrow)</span>
-                  <span>60° (Normal)</span>
-                  <span>120° (Fisheye)</span>
-                </div>
               </div>
             </div>
 
@@ -419,42 +332,11 @@
                 <button onclick="setAperture('f/16')" class="ap-btn text-[11px] font-mono py-1 rounded bg-panel border border-panelBorder hover:border-accentPink text-gray-300 transition">f/16</button>
               </div>
             </div>
-
-            <!-- Focus Distance -->
-            <div class="space-y-1">
-              <div class="flex justify-between text-xs font-mono">
-                <span class="text-gray-300">FOCUS DISTANCE</span>
-                <span id="valFocusDistance" class="text-white font-bold">2.5m</span>
-              </div>
-              <input type="range" id="sliderFocusDistance" min="0.3" max="15" value="2.5" step="0.1" class="w-full">
-            </div>
           </div>
-
-          <!-- REAL-TIME SHOT DESCRIPTION & JSON TELEMETRY -->
-          <div class="bg-background/60 border border-panelBorder rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase font-mono font-bold tracking-wider text-accentGreen flex items-center space-x-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                <span>Real-Time Camera Tag</span>
-              </span>
-              <div class="flex items-center space-x-2">
-                <button onclick="copyCameraDescription()" class="text-[11px] font-mono text-gray-400 hover:text-white px-2 py-0.5 rounded bg-panelBorder/70 transition">Copy Tag</button>
-                <button onclick="copyCameraJson()" class="text-[11px] font-mono text-accentCyan hover:underline px-2 py-0.5 rounded bg-accentCyan/10 border border-accentCyan/30 transition">Copy JSON</button>
-              </div>
-            </div>
-
-            <div class="relative">
-              <textarea id="cameraDescriptionBox" rows="3" class="w-full bg-background border border-panelBorder rounded-xl p-2.5 font-mono text-xs text-accentGreen/90 focus:outline-none focus:border-accentGreen/60 transition resize-none"></textarea>
-            </div>
-            
-            <p class="text-[11px] text-gray-400 leading-relaxed italic" id="humanCameraDescription">
-              Front view, eye-level shot, medium shot, 35mm lens, shallow depth of field (f/2.8).
-            </p>
-          </div>
-
         </div>
       </section>
 
+      <!-- RIGHT: PROMPT, NOVEL VIEW & OUTPUT -->
       <section class="lg:col-span-6 flex flex-col h-full bg-background overflow-y-auto">
         <div class="p-4 md:p-6 space-y-6 flex-1">
           
@@ -464,212 +346,73 @@
               <div class="flex items-center space-x-2">
                 <span class="w-2.5 h-2.5 rounded-sm bg-accentPink"></span>
                 <h3 class="text-xs uppercase font-bold tracking-wider text-white">Reference Images</h3>
-                <span class="text-[10px] text-gray-400 font-mono">(Subject / Style / Pose)</span>
               </div>
-              <label class="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-xl bg-accentPink/15 border border-accentPink/40 text-accentPink hover:bg-accentPink hover:text-white transition flex items-center space-x-1.5 shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <label class="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-xl bg-accentPink/15 border border-accentPink/40 text-accentPink hover:bg-accentPink hover:text-white transition flex items-center space-x-1.5">
                 <span>+ Upload Reference</span>
-                <input type="file" id="referenceFileInput" accept="image/png, image/jpeg, image/webp" class="hidden" multiple onchange="handleReferenceFileUpload(event)">
+                <input type="file" id="referenceFileInput" accept="image/*" class="hidden" multiple onchange="handleReferenceFileUpload(event)">
               </label>
             </div>
 
-            <!-- Drag & Drop Dropzone Container -->
-            <div id="dropZoneContainer" class="border-2 border-dashed border-panelBorder hover:border-accentPink/60 rounded-xl p-4 transition text-center bg-background/50 relative cursor-pointer"
-                 ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDropFile(event)" onclick="document.getElementById('referenceFileInput').click()">
-              <div class="flex flex-col items-center justify-center space-y-2 py-2">
-                <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <p class="text-xs text-gray-300 font-medium">Drag & Drop references or click to upload</p>
-                <p class="text-[10px] text-gray-500 font-mono">PNG, JPG, WEBP supported • Up to 4 active references</p>
-              </div>
-            </div>
-
-            <!-- Uploaded References Gallery Cards -->
             <div id="referencesGallery" class="grid grid-cols-1 sm:grid-cols-2 gap-3 empty:hidden"></div>
-            
-            <!-- Reference Preservation Checkboxes -->
-            <div id="referenceOptionsBar" class="hidden pt-2 border-t border-panelBorder flex flex-wrap items-center gap-4 text-xs">
-              <span class="text-gray-400 font-mono text-[11px]">Preserve:</span>
-              <label class="flex items-center space-x-1.5 text-gray-300 cursor-pointer">
-                <input type="checkbox" id="preserveStructure" checked class="rounded border-panelBorder text-accentPink focus:ring-0">
-                <span>Subject Structure</span>
-              </label>
-              <label class="flex items-center space-x-1.5 text-gray-300 cursor-pointer" title="Uncheck to orbit freely">
-                <input type="checkbox" id="preserveComposition" class="rounded border-panelBorder text-accentPink focus:ring-0">
-                <span>Original Composition (Unchecked = Free Orbit)</span>
-              </label>
-              <label class="flex items-center space-x-1.5 text-gray-300 cursor-pointer">
-                <input type="checkbox" id="preserveCharacter" checked class="rounded border-panelBorder text-accentPink focus:ring-0">
-                <span>Subject Identity & Texture</span>
-              </label>
-              <label class="flex items-center space-x-1.5 text-gray-300 cursor-pointer">
-                <input type="checkbox" id="preserveStyle" class="rounded border-panelBorder text-accentPink focus:ring-0">
-                <span>Color & Lighting</span>
-              </label>
-            </div>
 
-            <!-- STRICT NOVEL-VIEW SYNTHESIS TOGGLE BANNER -->
-            <div id="strictConsistencyBanner" class="hidden bg-gradient-to-r from-accentCyan/10 via-accentGreen/10 to-transparent border border-accentCyan/40 rounded-xl p-3 space-y-2">
+            <!-- Novel-View Consistency Mode Banner -->
+            <div id="strictConsistencyBanner" class="hidden bg-gradient-to-r from-accentCyan/10 via-accentGreen/10 to-transparent border border-accentCyan/40 rounded-xl p-3 space-y-1.5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                   <span class="w-2 h-2 rounded-full bg-accentGreen animate-pulse"></span>
                   <span class="text-xs font-bold text-accentCyan uppercase font-mono tracking-wider">Mode Konsistensi Subjek 100%</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-accentGreen/20 text-accentGreen font-mono font-medium">Ubah Sudut Pandang Saja</span>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="strictNovelViewToggle" checked onchange="toggleStrictNovelView(this.checked)" class="sr-only peer">
+                  <input type="checkbox" id="strictNovelViewToggle" checked class="sr-only peer">
                   <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accentCyan"></div>
                 </label>
               </div>
               <p class="text-[11px] text-gray-300 leading-normal">
-                Subjek, objek, tekstur, detail, dan identitas foto referensi akan dipertahankan <strong class="text-white">tanpa diubah</strong>. Gemini Flash Image diarahkan untuk melakukan <span class="text-accentCyan font-mono">Novel-View Re-framing</span> murni mengorbit posisi kamera 3D.
+                Subjek foto referensi dipertahankan <strong class="text-white">tanpa diubah</strong>, sistem hanya mengorbit sudut kamera 3D.
               </p>
-              <div class="flex items-center space-x-2 text-[10px] font-mono text-gray-400 bg-background/60 px-2.5 py-1 rounded-md border border-panelBorder">
-                <span class="text-accentOrange font-semibold">ROTASI KAMERA:</span>
-                <span id="relativeViewTrajectory" class="text-gray-200">Orbit 0° horizontal, elevasi 20° terhadap subjek referensi</span>
-              </div>
             </div>
           </div>
 
-          <!-- PROMPT & MATRIX PANEL -->
+          <!-- PROMPT PANEL -->
           <div class="bg-panel border border-panelBorder rounded-2xl p-4 space-y-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
                 <span class="w-2.5 h-2.5 rounded-sm bg-accentCyan"></span>
                 <h3 class="text-xs uppercase font-bold tracking-wider text-white">Generation Prompt</h3>
               </div>
-              <button onclick="enhanceUserPromptWithAI()" id="btnEnhancePrompt" class="px-3 py-1 rounded-xl text-xs font-semibold bg-gradient-to-r from-accentCyan/20 to-accentGreen/20 hover:from-accentCyan hover:to-accentGreen border border-accentCyan/40 text-white hover:text-black transition flex items-center space-x-1.5 shadow-sm">
+              <button onclick="enhanceUserPromptWithAI()" id="btnEnhancePrompt" class="px-3 py-1 rounded-xl text-xs font-semibold bg-accentCyan/20 hover:bg-accentCyan hover:text-black border border-accentCyan/40 text-accentCyan transition">
                 <span>✨ Enhance Prompt</span>
               </button>
             </div>
 
-            <!-- Main Prompt Textarea -->
-            <div class="relative">
-              <textarea id="mainPromptInput" rows="4" 
-                placeholder="Describe the subject, environment, lighting, and scene in detail (e.g., A cybernetic samurai standing under rainy neon lanterns in Neo-Shinjuku, wet reflections, ultra detailed, cinematic atmosphere...)"
-                class="w-full bg-background border border-panelBorder rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accentCyan transition"></textarea>
-            </div>
+            <textarea id="mainPromptInput" rows="4" 
+              placeholder="Jelaskan subjek, latar, pencahayaan, dan detail gambar di sini..."
+              class="w-full bg-background border border-panelBorder rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accentCyan transition"></textarea>
+          </div>
 
-            <!-- Advanced Prompt Matrix Accordion -->
-            <details class="group bg-background/50 border border-panelBorder rounded-xl text-xs">
-              <summary class="p-3 cursor-pointer select-none text-gray-400 group-open:text-white flex items-center justify-between font-mono text-[11px]">
-                <span>▸ Advanced Prompt Matrix (Subject Type, Surface, Studio Lighting, Atmosphere)</span>
-                <span class="text-accentCyan group-open:rotate-90 transition-transform">›</span>
-              </summary>
-              <div class="p-3 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-panelBorder/50 mt-2">
-                <div>
-                  <label class="text-[10px] text-gray-400 font-mono block mb-1">Subject Description</label>
-                  <input type="text" id="matrixSubject" placeholder="e.g. luxury perfume glass bottle, sports car, gourmet ramen bowl, architectural villa" class="w-full bg-background border border-panelBorder rounded-lg p-2 text-xs text-white">
-                </div>
-                <div>
-                  <label class="text-[10px] text-gray-400 font-mono block mb-1">Studio Pedestal / Surface</label>
-                  <select id="matrixSurface" class="w-full bg-background border border-panelBorder rounded-lg p-2 text-xs text-white">
-                    <option value="None / Natural Environment">Natural Environment / No Surface</option>
-                    <option value="Matte Black Cylinder Pedestal">Matte Black Cylinder Pedestal</option>
-                    <option value="Carrara White Marble Slab">Carrara White Marble Slab</option>
-                    <option value="Reflective Mirror Water Surface with Droplets">Reflective Mirror Water Surface with Droplets</option>
-                    <option value="Dark Brushed Aluminum Table">Dark Brushed Aluminum Table</option>
-                    <option value="Rustic Dark Wood Platter">Rustic Dark Wood Platter</option>
-                    <option value="Wet Asphalt with Neon City Reflections">Wet Asphalt with Neon Reflections</option>
-                    <option value="Floating in Anti-Gravity Vacuum">Floating in Anti-Gravity Space</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-[10px] text-gray-400 font-mono block mb-1">Lighting Preset</label>
-                  <select id="matrixLighting" class="w-full bg-background border border-panelBorder rounded-lg p-2 text-xs text-white">
-                    <option value="Commercial Softbox Studio Lighting with Rim Edge">Commercial Softbox Studio with Rim Edge</option>
-                    <option value="Moody Low-Key Tabletop with Caustic Light Shadows">Moody Tabletop with Caustic Light Shadows</option>
-                    <option value="High-Key Clean White E-commerce Catalog Light">High-Key Clean White E-commerce Light</option>
-                    <option value="Golden Hour Warm Backlight with Sun Flare">Golden Hour Warm Backlight</option>
-                    <option value="Volumetric Cyberpunk Neon Glow">Volumetric Cyberpunk Neon Glow</option>
-                    <option value="Overcast Diffused Architectural Daylight">Overcast Diffused Architectural Daylight</option>
-                    <option value="Dramatic Car Commercial Tunnel Light Strips">Car Commercial Tunnel Light Strips</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-[10px] text-gray-400 font-mono block mb-1">Atmosphere / Special FX</label>
-                  <input type="text" id="matrixMood" placeholder="e.g. rising gentle steam, water splashes, floating dust motes, bokeh flares" class="w-full bg-background border border-panelBorder rounded-lg p-2 text-xs text-white">
-                </div>
-                <div class="sm:col-span-2 flex justify-end">
-                  <button onclick="injectMatrixToPrompt()" class="px-3 py-1.5 rounded-lg bg-panelBorder hover:bg-gray-700 text-[11px] font-mono text-gray-200">
-                    Inject Matrix into Prompt
-                  </button>
-                </div>
-              </div>
-            </details>
-
-            <!-- Negative Prompt Box -->
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-400 font-mono text-[11px]">Negative Prompt:</span>
-                <span class="text-[10px] text-gray-500 font-mono">Excluded artifacts</span>
-              </div>
-              <textarea id="negativePromptInput" rows="2" class="w-full bg-background border border-panelBorder rounded-xl p-2.5 text-xs text-gray-300 focus:outline-none focus:border-red-500/50 transition">blurry, low quality, distorted anatomy, bad composition, extra limbs, duplicate objects, warped geometry, oversaturated, text artifacts, watermark, cropped subject</textarea>
+          <!-- ASPECT RATIO -->
+          <div class="bg-panel border border-panelBorder rounded-2xl p-4 space-y-3">
+            <span class="text-xs uppercase font-bold tracking-wider text-white">Aspect Ratio:</span>
+            <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5" id="aspectRatioContainer">
+              <button onclick="setAspectRatio('16:9')" data-ratio="16:9" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-accentOrange text-black font-bold">16:9</button>
+              <button onclick="setAspectRatio('1:1')" data-ratio="1:1" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">1:1</button>
+              <button onclick="setAspectRatio('4:3')" data-ratio="4:3" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">4:3</button>
+              <button onclick="setAspectRatio('3:4')" data-ratio="3:4" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">3:4</button>
+              <button onclick="setAspectRatio('9:16')" data-ratio="9:16" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">9:16</button>
+              <button onclick="setAspectRatio('3:2')" data-ratio="3:2" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">3:2</button>
+              <button onclick="setAspectRatio('2:3')" data-ratio="2:3" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">2:3</button>
+              <button onclick="setAspectRatio('21:9')" data-ratio="21:9" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300">21:9</button>
             </div>
           </div>
 
-          <!-- OUTPUT SPECIFICATIONS -->
-          <div class="bg-panel border border-panelBorder rounded-2xl p-4 space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-xs uppercase font-bold tracking-wider text-white flex items-center space-x-2">
-                <span class="w-2.5 h-2.5 rounded-sm bg-accentOrange"></span>
-                <span>Output Specifications</span>
-              </span>
-              <span class="text-[11px] font-mono text-accentCyan" id="aspectRatioLabel">16:9 Cinematic</span>
-            </div>
-
-            <!-- Aspect Ratio Buttons -->
-            <div class="space-y-2">
-              <label class="text-[11px] text-gray-400 font-mono">Aspect Ratio:</label>
-              <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5" id="aspectRatioContainer">
-                <button onclick="setAspectRatio('16:9')" data-ratio="16:9" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-accentOrange/20 border border-accentOrange text-white transition">16:9</button>
-                <button onclick="setAspectRatio('1:1')" data-ratio="1:1" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">1:1</button>
-                <button onclick="setAspectRatio('4:3')" data-ratio="4:3" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">4:3</button>
-                <button onclick="setAspectRatio('3:4')" data-ratio="3:4" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">3:4</button>
-                <button onclick="setAspectRatio('9:16')" data-ratio="9:16" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">9:16</button>
-                <button onclick="setAspectRatio('3:2')" data-ratio="3:2" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">3:2</button>
-                <button onclick="setAspectRatio('2:3')" data-ratio="2:3" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">2:3</button>
-                <button onclick="setAspectRatio('21:9')" data-ratio="21:9" class="ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition">21:9</button>
-              </div>
-            </div>
-
-            <!-- Genre & Mode Selectors -->
-            <div class="grid grid-cols-2 gap-3 pt-1">
-              <div>
-                <label class="text-[11px] text-gray-400 font-mono block mb-1">Photography Mode & Genre:</label>
-                <select id="photographyMode" class="w-full bg-background border border-panelBorder rounded-lg p-2 text-xs text-white focus:outline-none" onchange="applyModePreset(this.value)">
-                  <option value="PRODUCT">Commercial Product & Packshot</option>
-                  <option value="FOOD">Food & Beverage / Gastronomy</option>
-                  <option value="AUTOMOTIVE">Automotive & Transport</option>
-                  <option value="ARCHITECTURE">Architecture & Real Estate</option>
-                  <option value="INTERIOR">Interior Design & Furniture</option>
-                  <option value="JEWELRY">Jewelry & Luxury Macro</option>
-                  <option value="CINEMATIC" selected>Cinematic Masterpiece</option>
-                  <option value="PORTRAIT">High-Fashion Portrait</option>
-                  <option value="ANIMAL">Animals & Wildlife</option>
-                  <option value="LANDSCAPE">Grand Landscape</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="text-[11px] text-gray-400 font-mono block mb-1">Quality Render Profile:</label>
-                <select id="renderQuality" class="w-full bg-background border border-panelBorder rounded-lg p-2 text-xs text-white focus:outline-none">
-                  <option value="Ultra Detail (Studio Grade)">Ultra Detail (Studio Grade)</option>
-                  <option value="High Cinematic">High Cinematic</option>
-                  <option value="Commercial E-commerce Clean">Commercial E-commerce Clean</option>
-                  <option value="Fast Concept">Fast Concept</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- PRIMARY GENERATE BUTTON & PROGRESS -->
+          <!-- PRIMARY GENERATE BUTTON -->
           <div class="space-y-3">
             <button id="btnGenerate" onclick="executeImageGeneration()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-accentCyan via-accentGreen to-accentPink text-black font-extrabold text-sm uppercase tracking-wider shadow-lg shadow-accentCyan/20 hover:opacity-95 active:scale-[0.99] transition transform flex items-center justify-center space-x-2">
               <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
               <span>Generate Cinematic Image</span>
             </button>
 
-            <!-- Multi-Stage Progress Container -->
+            <!-- Progress Bar -->
             <div id="generationProgressBox" class="hidden bg-panel border border-accentCyan/30 rounded-2xl p-4 space-y-3">
               <div class="flex items-center justify-between text-xs font-mono">
                 <span class="text-accentCyan flex items-center space-x-2">
@@ -681,164 +424,85 @@
               <div class="w-full bg-background h-2 rounded-full overflow-hidden border border-panelBorder">
                 <div id="progressBarFill" class="bg-gradient-to-r from-accentCyan via-accentGreen to-accentPink h-full w-0 transition-all duration-300"></div>
               </div>
-              <div class="text-[10px] text-gray-400 font-mono flex justify-between" id="progressSubSteps">
-                <span>1. Camera Coordinates</span>
-                <span>2. AI Studio Auth</span>
-                <span>3. Diffusion Pass</span>
-              </div>
             </div>
           </div>
 
+          <!-- OUTPUT CANVAS -->
           <div class="bg-panel border border-panelBorder rounded-2xl p-4 space-y-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
                 <span class="w-2.5 h-2.5 rounded-sm bg-accentGreen"></span>
                 <h3 class="text-xs uppercase font-bold tracking-wider text-white">Generated Canvas</h3>
               </div>
-              <div class="flex items-center space-x-2" id="outputActionButtons"></div>
             </div>
 
-            <!-- Display Stage: Empty State or Active Canvas -->
-            <div id="outputStageContainer" class="min-h-[350px] bg-[#09090D] rounded-xl border border-panelBorder overflow-hidden relative flex items-center justify-center">
-              
-              <!-- Empty Placeholder -->
+            <div id="outputStageContainer" class="min-h-[350px] bg-[#09090D] rounded-xl border border-panelBorder overflow-hidden relative flex items-center justify-center p-2">
               <div id="emptyOutputPlaceholder" class="p-8 text-center space-y-3">
-                <div class="w-16 h-16 rounded-2xl bg-panelBorder/50 mx-auto flex items-center justify-center text-gray-500">
-                  <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                </div>
-                <h4 class="text-xs font-semibold text-gray-300">Generated image will appear here</h4>
-                <p class="text-[11px] text-gray-500 max-w-sm">Configure your 3D camera angles on the left, upload references if desired, and click Generate.</p>
+                <p class="text-xs text-gray-400">Hasil render gambar AI akan muncul di sini</p>
               </div>
-
-              <!-- Main Output Image Canvas / Interactive Split Slider -->
-              <div id="activeOutputContainer" class="hidden w-full h-full relative flex flex-col items-center justify-center">
-                <div id="imageRenderWrapper" class="relative max-h-[600px] w-full flex items-center justify-center p-2"></div>
-              </div>
-
-            </div>
-
-            <!-- Output Action Toolbars -->
-            <div id="outputFooterBar" class="hidden flex-wrap items-center justify-between gap-2 pt-2 border-t border-panelBorder">
-              <div class="flex items-center space-x-2">
-                <button onclick="downloadActiveOutput()" class="px-3 py-1.5 rounded-xl bg-accentCyan/15 hover:bg-accentCyan hover:text-black border border-accentCyan/30 text-accentCyan text-xs font-semibold transition flex items-center space-x-1.5">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                  <span>Download Image</span>
-                </button>
-                <button onclick="openOutputFullscreen()" class="px-3 py-1.5 rounded-xl bg-panelBorder hover:bg-gray-700 text-gray-200 text-xs transition flex items-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                  <span>Fullscreen</span>
-                </button>
-              </div>
-
-              <div class="flex items-center space-x-2">
-                <button onclick="saveCurrentToHistory()" class="px-3 py-1.5 rounded-xl bg-panelBorder hover:bg-gray-700 text-gray-300 text-xs transition">
-                  Save to History
-                </button>
-                <button onclick="copyGeneratedPrompt()" class="px-3 py-1.5 rounded-xl bg-panelBorder hover:bg-gray-700 text-gray-300 text-xs transition">
-                  Copy Prompt
-                </button>
+              <div id="activeOutputContainer" class="hidden w-full h-full flex items-center justify-center">
+                <img id="mainResultImg" src="" alt="Output" class="max-h-[500px] w-auto rounded-xl object-contain shadow-2xl">
               </div>
             </div>
 
-            <!-- Before/After Comparison Mode Toggle -->
-            <div id="comparisonToggleContainer" class="hidden p-3 bg-background/50 rounded-xl border border-panelBorder flex items-center justify-between">
-              <span class="text-xs text-gray-300 font-mono">Reference Comparison:</span>
-              <div class="flex items-center space-x-2 text-xs">
-                <button onclick="toggleComparisonMode('result')" id="btnCompResult" class="px-2.5 py-1 rounded bg-accentCyan text-black font-semibold">Generated Only</button>
-                <button onclick="toggleComparisonMode('split')" id="btnCompSplit" class="px-2.5 py-1 rounded bg-panelBorder text-gray-300 hover:text-white">Interactive Split Slider</button>
-              </div>
+            <div id="outputFooterBar" class="hidden flex justify-between items-center pt-2 border-t border-panelBorder">
+              <a id="downloadBtn" href="#" download="eriodr_render.png" class="px-3 py-1.5 rounded-xl bg-accentCyan/20 text-accentCyan hover:bg-accentCyan hover:text-black text-xs font-mono font-semibold transition">
+                Download Image
+              </a>
             </div>
-
           </div>
 
         </div>
       </section>
     </div>
 
+    <!-- PRESETS VIEW -->
     <div id="viewPresets" class="hidden flex-1 overflow-y-auto p-6 max-w-6xl mx-auto w-full space-y-6">
       <div class="flex items-center justify-between pb-4 border-b border-panelBorder">
-        <div>
-          <h2 class="text-lg font-bold text-white">Cinematic Camera Presets Library</h2>
-          <p class="text-xs text-gray-400">Instantly configure real-world camera rigs, lenses, and framing geometries.</p>
-        </div>
-        <button onclick="switchMainTab('workspace')" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-200 hover:bg-gray-700">
-          ← Back to Studio
-        </button>
+        <h2 class="text-lg font-bold text-white">Camera Presets</h2>
+        <button onclick="switchMainTab('workspace')" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-200">← Back</button>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="fullPresetsGrid"></div>
     </div>
 
+    <!-- HISTORY VIEW -->
     <div id="viewHistory" class="hidden flex-1 overflow-y-auto p-6 max-w-6xl mx-auto w-full space-y-6">
       <div class="flex items-center justify-between pb-4 border-b border-panelBorder">
-        <div>
-          <h2 class="text-lg font-bold text-white">Render History & Session Archive</h2>
-          <p class="text-xs text-gray-400">All renders generated in this session with full camera parameters saved.</p>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button onclick="clearHistoryLog()" class="px-3 py-1.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 text-xs hover:bg-red-500 hover:text-white transition">
-            Clear History
-          </button>
-          <button onclick="switchMainTab('workspace')" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-200 hover:bg-gray-700">
-            ← Back to Studio
-          </button>
-        </div>
+        <h2 class="text-lg font-bold text-white">Render History</h2>
+        <button onclick="switchMainTab('workspace')" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-200">← Back</button>
       </div>
       <div id="historyCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
-      <div id="emptyHistoryNotice" class="text-center py-16 text-gray-500 text-xs">
-        No generation records yet. Create your first cinematic render!
-      </div>
     </div>
 
+    <!-- SETTINGS VIEW -->
     <div id="viewSettings" class="hidden flex-1 overflow-y-auto p-6 max-w-3xl mx-auto w-full space-y-6">
       <div class="flex items-center justify-between pb-4 border-b border-panelBorder">
-        <div>
-          <h2 class="text-lg font-bold text-white">Engine Settings & Preferences</h2>
-          <p class="text-xs text-gray-400">Configure Google AI Studio credentials, model preferences, and quotas.</p>
-        </div>
-        <button onclick="switchMainTab('workspace')" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-200 hover:bg-gray-700">
-          ← Back to Studio
-        </button>
+        <h2 class="text-lg font-bold text-white">Engine Settings</h2>
+        <button onclick="switchMainTab('workspace')" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-200">← Back</button>
       </div>
-
-      <div class="bg-panel border border-panelBorder rounded-2xl p-6 space-y-6">
-        <div class="space-y-2">
-          <label class="block text-xs font-mono text-gray-300">Google AI Studio Gemini API Key:</label>
-          <div class="flex gap-2">
-            <input type="password" id="settingsApiKeyInput" placeholder="Tempel kunci AI Studio (AQ... atau AIzaSy...)" 
-                   class="flex-1 bg-background border border-panelBorder rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-accentCyan">
-            <button onclick="saveApiKeyFromInput(document.getElementById('settingsApiKeyInput').value)" class="px-4 py-2 bg-accentCyan text-black font-bold text-xs rounded-xl hover:opacity-90 transition">
-              Simpan
-            </button>
+      <div class="bg-panel border border-panelBorder rounded-2xl p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-mono text-gray-300 mb-2">Google AI Studio API Key:</label>
+          <div class="flex space-x-2">
+            <input type="password" id="settingsApiKeyInput" class="flex-1 bg-background border border-panelBorder rounded-xl p-3 text-xs text-white focus:outline-none focus:border-accentCyan">
+            <button onclick="openApiKeyModal()" class="px-4 py-2 bg-accentCyan text-black font-semibold text-xs rounded-xl">Edit Key</button>
           </div>
-          <p class="text-[11px] text-gray-500">Mendukung format terbaru (AQ...) dan standar (AIzaSy...). Kunci tersimpan di browser localStorage.</p>
-        </div>
-
-        <div class="space-y-2">
-          <label class="block text-xs font-mono text-gray-300">Active Image Generation Model:</label>
-          <input type="text" value="gemini-3.1-flash-image (Auto-fallback to gemini-2.5-flash-image & imagen-3)" disabled
-                 class="w-full bg-background/50 border border-panelBorder rounded-xl p-3 text-xs text-accentCyan font-mono">
-        </div>
-
-        <div class="space-y-2">
-          <label class="block text-xs font-mono text-gray-300">Text & Prompt Assistant Model:</label>
-          <input type="text" value="gemini-2.5-flash (with offline matrix fallback)" disabled
-                 class="w-full bg-background/50 border border-panelBorder rounded-xl p-3 text-accentGreen font-mono">
         </div>
       </div>
     </div>
   </main>
 
-  <!-- GOOGLE AI STUDIO API KEY CONFIGURATION MODAL -->
-  <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm">
+  <!-- MODAL: GOOGLE AI STUDIO API KEY -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-panel border border-panelBorder max-w-md w-full rounded-2xl p-6 space-y-5 shadow-2xl relative" onclick="event.stopPropagation()">
-      <div class="flex items-center justify-between border-b border-panelBorder pb-3">
+      <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
           <div class="w-8 h-8 rounded-lg bg-accentCyan/20 flex items-center justify-center text-accentCyan">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Google AI Studio API Key</h3>
-            <p class="text-[10px] text-gray-400 font-mono">Mendukung format AQ... dan AIzaSy...</p>
+            <h3 class="text-sm font-bold text-white">Masukkan API Key Google AI Studio</h3>
+            <p class="text-[11px] text-gray-400">Mendukung format terbaru (AQ...) dan standar (AIza...)</p>
           </div>
         </div>
         <button onclick="closeApiKeyModal()" class="text-gray-400 hover:text-white">✕</button>
@@ -846,36 +510,41 @@
 
       <div class="bg-background/80 border border-panelBorder rounded-xl p-3 text-[11px] space-y-2 text-gray-300">
         <div class="flex justify-between items-center">
-          <span class="font-semibold text-white">Kunci Resmi Google AI Studio:</span>
+          <span class="font-semibold text-white">Langkah mendapatkan kunci:</span>
           <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-accentCyan hover:underline inline-flex items-center space-x-1">
             <span>Buka AI Studio</span>
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
           </a>
         </div>
-        <p class="text-[10px] text-gray-400 leading-relaxed">
-          Kunci Anda (misal berawalan <code class="text-accentCyan font-mono">AQ.Ab8...</code>) 100% didukung. Kunci diteruskan dengan header aman <code class="text-accentPink font-mono">x-goog-api-key</code>.
-        </p>
+        <ol class="list-decimal list-inside space-y-1 text-gray-400 text-[10px] leading-relaxed">
+          <li>Buka <strong class="text-gray-200">Google AI Studio</strong> lalu klik <em>"Create API Key"</em>.</li>
+          <li>Salin kunci yang muncul (diawali dengan <code class="text-accentCyan font-mono">AQ...</code> atau <code class="text-accentCyan font-mono">AIzaSy...</code>).</li>
+          <li>Tempelkan ke kolom di bawah ini lalu klik <em>Simpan & Gunakan</em>.</li>
+        </ol>
       </div>
 
       <div class="space-y-1.5">
-        <label class="text-xs font-mono text-gray-300 block">Gemini API Key:</label>
+        <label class="text-[11px] font-mono text-gray-300 flex justify-between">
+          <span>Gemini API Key:</span>
+          <span id="keyFormatType" class="text-accentGreen text-[10px]">Format Otomatis</span>
+        </label>
         <div class="relative">
-          <input type="password" id="modalApiKeyInput" placeholder="Tempel kunci AI Studio Anda di sini" 
-                 class="w-full bg-background border border-panelBorder rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-accentCyan pr-10">
-          <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-gray-400 hover:text-white">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          <input type="password" id="modalApiKeyInput" placeholder="AQ.Ab... atau AIzaSy..."
+                 class="w-full bg-background border border-panelBorder rounded-xl p-3 pr-10 text-xs text-white font-mono focus:outline-none focus:border-accentCyan">
+          <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-3 text-gray-500 hover:text-gray-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
           </button>
         </div>
-        <p class="text-[10px] text-gray-500 font-mono">Kunci disimpan aman hanya di browser lokal Anda.</p>
+        <p class="text-[10px] text-gray-500">Kunci disimpan aman hanya di browser lokal Anda (localStorage).</p>
       </div>
 
-      <div id="modalValidationStatus" class="hidden text-xs p-2.5 rounded-lg font-mono"></div>
+      <div id="modalValidationStatus" class="hidden p-3 rounded-xl border text-xs font-mono"></div>
 
-      <div class="flex items-center justify-between pt-3 border-t border-panelBorder">
-        <button onclick="clearStoredApiKey()" class="text-xs text-red-400 hover:underline font-mono">Clear Key</button>
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="clearStoredApiKey()" class="text-red-400 hover:text-red-300 text-xs font-mono">Clear Key</button>
         <div class="flex items-center space-x-2">
-          <button onclick="closeApiKeyModal()" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-300 hover:bg-gray-700">Batal</button>
-          <button onclick="handleModalSaveApiKey()" id="btnModalSaveKey" class="px-4 py-1.5 rounded-xl bg-accentCyan text-black font-bold text-xs hover:opacity-90 transition">
+          <button onclick="closeApiKeyModal()" class="px-3 py-1.5 rounded-xl bg-panelBorder text-xs text-gray-300 hover:text-white">Batal</button>
+          <button id="btnSaveApiKey" onclick="validateAndSaveApiKey()" class="px-4 py-1.5 rounded-xl bg-accentCyan text-black font-bold text-xs hover:opacity-90 transition">
             Simpan & Gunakan
           </button>
         </div>
@@ -883,26 +552,12 @@
     </div>
   </div>
 
-  <!-- FULLSCREEN PREVIEW MODAL -->
-  <div id="fullscreenModal" class="hidden fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md" onclick="closeOutputFullscreen()">
-    <div class="max-w-5xl max-h-[90vh] relative" onclick="event.stopPropagation()">
-      <img id="fullscreenImageEl" src="" alt="Fullscreen view" class="max-h-[85vh] max-w-full rounded-xl object-contain border border-white/20 shadow-2xl">
-      <button onclick="closeOutputFullscreen()" class="absolute -top-10 right-0 text-white font-mono text-xs bg-panel border border-panelBorder px-3 py-1 rounded-lg">
-        ✕ Close (ESC)
-      </button>
-    </div>
-  </div>
-
-  <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
 
   <script>
-    const STORAGE_KEY = 'gemini_api_key';
-
     const appState = {
       camera: {
         activePreset: "Front View",
-        presetDirective: "Direct front view, eye-level camera framing",
         azimuth: 0,
         elevation: 20,
         distance: 2.5,
@@ -911,85 +566,55 @@
         focalLength: 35,
         cameraHeight: 1.6,
         targetHeight: 1.2,
-        dofEnabled: true,
-        aperture: 'f/2.8',
-        focusDistance: 2.5,
-        lockSubject: true,
-        lockHorizon: false,
+        aperture: 'f/2.8'
       },
-      composition: {
-        grid: 'Rule of Thirds',
-        mode: 'CINEMATIC',
-        aspectRatio: '16:9',
-        quality: 'Ultra Detail (Studio Grade)'
-      },
-      strictSubjectConsistency: true,
-      references: [],
-      currentOutput: null,
-      history: [],
-      comparisonMode: 'result',
+      composition: { aspectRatio: '16:9' },
       apiKey: '',
+      references: [],
+      history: [],
       isGenerating: false
     };
 
     const CAMERA_PRESETS = [
-      { name: "Product 45° Pedestal", promptDirective: "Elevated 45-degree isometric three-quarter hero angle looking down at product on pedestal", azimuth: 45, elevation: 32, distance: 1.6, roll: 0, fov: 38, focalLength: 70, aperture: 'f/4', category: "Product", recommendedRatio: '1:1', recommendedSubject: 'product' },
-      { name: "Flat Lay / Knolling", promptDirective: "Extreme 90-degree top-down overhead flat lay knolling perspective looking straight down from the ceiling", azimuth: 0, elevation: 89, distance: 2.0, roll: 0, fov: 60, focalLength: 35, aperture: 'f/5.6', category: "Product", recommendedRatio: '1:1', recommendedSubject: 'product' },
-      { name: "Product Eye Level", promptDirective: "Clean straight-on eye-level commercial catalog shot", azimuth: 0, elevation: 5, distance: 1.5, roll: 0, fov: 35, focalLength: 85, aperture: 'f/2.8', category: "Product", recommendedRatio: '1:1', recommendedSubject: 'product' },
-      { name: "Food Hero 45°", promptDirective: "Classic gastronomy 45-degree overhead hero food shot highlighting ingredients and depth", azimuth: 35, elevation: 45, distance: 1.3, roll: 0, fov: 42, focalLength: 60, aperture: 'f/2.8', category: "Food", recommendedRatio: '4:3', recommendedSubject: 'food' },
-      { name: "Food Close Macro", promptDirective: "Extreme mouth-watering close-up macro culinary shot with shallow focus and soft bokeh", azimuth: 20, elevation: 25, distance: 0.8, roll: 0, fov: 28, focalLength: 90, aperture: 'f/2', category: "Food", recommendedRatio: '1:1', recommendedSubject: 'food' },
-      { name: "Automotive 3/4 Dynamic", promptDirective: "Low-slung 3/4 front dynamic automotive hero shot taken from asphalt street level", azimuth: -45, elevation: -12, distance: 3.4, roll: 3, fov: 65, focalLength: 28, aperture: 'f/4', category: "Automotive", recommendedRatio: '16:9', recommendedSubject: 'automotive' },
-      { name: "Automotive Side Profile", promptDirective: "Pure lateral 90-degree side profile silhouette showing complete vehicle wheelbase", azimuth: -90, elevation: 0, distance: 3.8, roll: 0, fov: 50, focalLength: 50, aperture: 'f/5.6', category: "Automotive", recommendedRatio: '16:9', recommendedSubject: 'automotive' },
-      { name: "Automotive Rear Low", promptDirective: "Aggressive low-angle rear three-quarter view showing exhaust, taillights, and spoiler stance", azimuth: 155, elevation: -18, distance: 2.8, roll: -4, fov: 70, focalLength: 24, aperture: 'f/2.8', category: "Automotive", recommendedRatio: '16:9', recommendedSubject: 'automotive' },
-      { name: "Architecture Tilt-Shift", promptDirective: "Architectural photography with tilt-shift perspective correction and straight vertical lines", azimuth: 25, elevation: 0, distance: 5.5, roll: 0, fov: 75, focalLength: 20, aperture: 'f/8', category: "Architecture", recommendedRatio: '16:9', recommendedSubject: 'architecture' },
-      { name: "Interior Wide Angle", promptDirective: "Spacious interior design editorial wide shot capturing walls, floor textures, and ambient daylight", azimuth: -30, elevation: 5, distance: 3.2, roll: 0, fov: 85, focalLength: 16, aperture: 'f/8', category: "Interior", recommendedRatio: '16:9', recommendedSubject: 'furniture' },
-      { name: "Jewelry Macro Luxury", promptDirective: "Ultra-close luxury macro shot capturing gem facets, light dispersion sparkles, and metallic reflections", azimuth: 30, elevation: 35, distance: 0.6, roll: 5, fov: 24, focalLength: 100, aperture: 'f/2.8', category: "Jewelry", recommendedRatio: '1:1', recommendedSubject: 'jewelry' },
-      { name: "Front View", promptDirective: "Straight-on direct front view facing the subject directly at eye-level", azimuth: 0, elevation: 0, distance: 2.5, roll: 0, fov: 50, focalLength: 35, aperture: 'f/2.8', category: "Angle" },
-      { name: "Back View", promptDirective: "Reverse 180-degree shot viewed directly from behind the subject", azimuth: 180, elevation: 5, distance: 2.8, roll: 0, fov: 50, focalLength: 35, aperture: 'f/2.8', category: "Angle" },
-      { name: "Left Profile", promptDirective: "Direct 90-degree left profile view shot entirely from the subject's left side", azimuth: -90, elevation: 0, distance: 2.5, roll: 0, fov: 50, focalLength: 35, aperture: 'f/2.8', category: "Angle" },
-      { name: "Right Profile", promptDirective: "Direct 90-degree right profile view shot entirely from the subject's right side", azimuth: 90, elevation: 0, distance: 2.5, roll: 0, fov: 50, focalLength: 35, aperture: 'f/2.8', category: "Angle" },
-      { name: "Three Quarter View", promptDirective: "Classic 45-degree three-quarter view showing both front face and side depth", azimuth: -45, elevation: 15, distance: 2.5, roll: 0, fov: 50, focalLength: 50, aperture: 'f/2', category: "Angle" },
-      { name: "Low Angle", promptDirective: "Dramatic low angle shot looking up at the subject from ground level, giving a powerful heroic presence", azimuth: 0, elevation: -30, distance: 2.0, roll: 0, fov: 65, focalLength: 24, aperture: 'f/2.8', category: "Level" },
-      { name: "High Angle", promptDirective: "High angle elevated view looking downwards at the subject from an elevated vantage point", azimuth: 0, elevation: 35, distance: 2.5, roll: 0, fov: 55, focalLength: 35, aperture: 'f/4', category: "Level" },
-      { name: "Bird's Eye", promptDirective: "High-altitude bird's eye overhead perspective looking straight down", azimuth: 0, elevation: 85, distance: 3.5, roll: 0, fov: 70, focalLength: 20, aperture: 'f/8', category: "Level" },
-      { name: "Worm's Eye", promptDirective: "Extreme worm's eye perspective looking directly upward from floor level", azimuth: 0, elevation: -75, distance: 1.5, roll: 0, fov: 80, focalLength: 16, aperture: 'f/4', category: "Level" },
-      { name: "Close Up", promptDirective: "Intimate close-up framing tightly composed around key subject features", azimuth: 0, elevation: 0, distance: 1.0, roll: 0, fov: 30, focalLength: 85, aperture: 'f/1.4', category: "Framing" },
-      { name: "Medium Shot", promptDirective: "Balanced medium shot capturing subject and immediate environment", azimuth: -10, elevation: 5, distance: 2.4, roll: 0, fov: 50, focalLength: 35, aperture: 'f/2.8', category: "Framing" },
-      { name: "Full Shot", promptDirective: "Full-body shot showcasing the complete subject from top to bottom", azimuth: 0, elevation: -5, distance: 4.5, roll: 0, fov: 60, focalLength: 28, aperture: 'f/5.6', category: "Framing" },
-      { name: "Wide Shot", promptDirective: "Expansive wide establishing shot showcasing large surroundings and environmental context", azimuth: -20, elevation: 15, distance: 6.5, roll: 0, fov: 75, focalLength: 20, aperture: 'f/8', category: "Framing" },
-      { name: "Dutch Angle", promptDirective: "Dramatic tilted dutch angle with skewed horizon line creating cinematic tension", azimuth: -25, elevation: -15, distance: 2.0, roll: 18, fov: 65, focalLength: 28, aperture: 'f/2', category: "Cinematic" },
-      { name: "Cinematic", promptDirective: "Cinematic film still with widescreen anamorphic feel, 35mm lens, atmospheric depth", azimuth: -35, elevation: 10, distance: 2.8, roll: -3, fov: 55, focalLength: 35, aperture: 'f/2', category: "Cinematic", recommendedRatio: '16:9' },
-      { name: "Portrait", promptDirective: "Professional high-end studio portrait framing with creamy bokeh and 85mm prime lens", azimuth: -10, elevation: 0, distance: 1.8, roll: 0, fov: 32, focalLength: 85, aperture: 'f/1.4', category: "Commercial", recommendedRatio: '3:4' },
-      { name: "Animal Action", promptDirective: "Dynamic eye-level wildlife framing capturing animal posture and motion", azimuth: -20, elevation: -15, distance: 2.2, roll: 0, fov: 50, focalLength: 70, aperture: 'f/2.8', category: "Animal", recommendedRatio: '4:3' }
+      { name: "Product 45° Pedestal", azimuth: 45, elevation: 32, distance: 1.6, fov: 38, focalLength: 70 },
+      { name: "Flat Lay / Knolling", azimuth: 0, elevation: 89, distance: 2.0, fov: 60, focalLength: 35 },
+      { name: "Food Hero 45°", azimuth: 35, elevation: 45, distance: 1.3, fov: 42, focalLength: 60 },
+      { name: "Automotive 3/4 Dynamic", azimuth: -45, elevation: -12, distance: 3.4, fov: 65, focalLength: 28 },
+      { name: "Jewelry Macro Luxury", azimuth: 30, elevation: 35, distance: 0.6, fov: 24, focalLength: 100 },
+      { name: "Front View", azimuth: 0, elevation: 0, distance: 2.5, fov: 50, focalLength: 35 },
+      { name: "Low Angle", azimuth: 0, elevation: -30, distance: 2.0, fov: 65, focalLength: 24 },
+      { name: "Close Up", azimuth: 0, elevation: 0, distance: 1.0, fov: 30, focalLength: 85 }
     ];
 
-    function initApiKeyManagement() {
-      // Default key from user if available or localStorage
-      const storedKey = localStorage.getItem(STORAGE_KEY) || 'AQ.Ab8RN6JnmItv28W0BN-4BpsHrR12e-ZZgG5fkXh1lTvdTibGzg';
-      if (storedKey) {
-        appState.apiKey = storedKey.trim();
-        localStorage.setItem(STORAGE_KEY, appState.apiKey);
+    function initApiKey() {
+      const savedKey = localStorage.getItem('gemini_api_key');
+      if (savedKey && savedKey.trim().length > 10) {
+        appState.apiKey = savedKey.trim();
+        updateApiKeyUI(true);
+      } else {
+        appState.apiKey = '';
+        updateApiKeyUI(false);
       }
-      updateApiKeyDisplay();
     }
 
-    function updateApiKeyDisplay() {
-      const isSet = Boolean(appState.apiKey);
-      const headerBtn = document.getElementById('headerApiKeyBtn');
-      const headerDot = document.getElementById('apiKeyStatusDot');
-      const headerText = document.getElementById('apiKeyStatusText');
+    function updateApiKeyUI(hasKey) {
+      const banner = document.getElementById('apiKeyBanner');
+      const dot = document.getElementById('apiKeyDot');
+      const label = document.getElementById('apiKeyStatusLabel');
+      const badgeBtn = document.getElementById('apiKeyBadgeBtn');
       const settingsInput = document.getElementById('settingsApiKeyInput');
 
-      if (isSet) {
-        const masked = appState.apiKey.substring(0, 6) + '...' + appState.apiKey.slice(-4);
-        headerBtn.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono transition shadow-sm bg-accentGreen/10 border-accentGreen/30 text-accentGreen hover:bg-accentGreen/20';
-        headerDot.className = 'w-2 h-2 rounded-full bg-accentGreen';
-        headerText.innerText = `AI Studio: ${masked}`;
-        if (settingsInput) settingsInput.value = appState.apiKey;
+      if (hasKey) {
+        if (banner) banner.classList.add('hidden');
+        dot.className = 'w-2 h-2 rounded-full bg-accentGreen';
+        label.innerText = 'AI Studio: Connected';
+        badgeBtn.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-accentGreen/30 bg-accentGreen/10 text-accentGreen text-xs font-mono';
+        if (settingsInput) settingsInput.value = '••••••••••••••••••••••••••••••••';
       } else {
-        headerBtn.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono transition shadow-sm bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20';
-        headerDot.className = 'w-2 h-2 rounded-full bg-red-500 animate-ping';
-        headerText.innerText = 'AI Studio: Set Key';
+        if (banner) banner.classList.remove('hidden');
+        dot.className = 'w-2 h-2 rounded-full bg-red-500 animate-pulse';
+        label.innerText = 'AI Studio: Set Key';
+        badgeBtn.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 text-xs font-mono';
         if (settingsInput) settingsInput.value = '';
       }
     }
@@ -997,10 +622,10 @@
     function openApiKeyModal() {
       const modal = document.getElementById('apiKeyModal');
       const input = document.getElementById('modalApiKeyInput');
-      const status = document.getElementById('modalValidationStatus');
-      modal.classList.remove('hidden');
+      const statusBox = document.getElementById('modalValidationStatus');
+      statusBox.classList.add('hidden');
       input.value = appState.apiKey || '';
-      status.classList.add('hidden');
+      modal.classList.remove('hidden');
       input.focus();
     }
 
@@ -1013,462 +638,95 @@
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
-    function handleModalSaveApiKey() {
-      const key = document.getElementById('modalApiKeyInput').value.trim();
-      saveApiKeyFromInput(key);
-      closeApiKeyModal();
-    }
+    async function validateAndSaveApiKey() {
+      const input = document.getElementById('modalApiKeyInput');
+      const statusBox = document.getElementById('modalValidationStatus');
+      const saveBtn = document.getElementById('btnSaveApiKey');
+      const rawKey = input.value.trim();
 
-    function saveApiKeyFromInput(key) {
-      if (!key) {
-        showToast('Kunci API tidak boleh kosong.');
+      if (!rawKey) {
+        statusBox.className = 'p-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 text-xs font-mono';
+        statusBox.innerText = 'Kunci API tidak boleh kosong.';
+        statusBox.classList.remove('hidden');
         return;
       }
-      appState.apiKey = key;
-      localStorage.setItem(STORAGE_KEY, key);
-      updateApiKeyDisplay();
-      showToast('✓ Kunci Google AI Studio berhasil disimpan!');
+
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Memverifikasi...';
+      statusBox.className = 'p-3 rounded-xl border border-accentCyan/40 bg-accentCyan/10 text-accentCyan text-xs font-mono';
+      statusBox.innerText = 'Menghubungi Google AI Studio...';
+      statusBox.classList.remove('hidden');
+
+      try {
+        const testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(rawKey)}`;
+        const res = await fetch(testUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': rawKey
+          }
+        });
+
+        if (res.ok) {
+          localStorage.setItem('gemini_api_key', rawKey);
+          appState.apiKey = rawKey;
+          updateApiKeyUI(true);
+          statusBox.className = 'p-3 rounded-xl border border-accentGreen/40 bg-accentGreen/10 text-accentGreen text-xs font-mono';
+          statusBox.innerText = '✓ Berhasil! API Key Google AI Studio aktif & tersimpan.';
+          showToast('✓ API Key berhasil disimpan!');
+          setTimeout(() => { closeApiKeyModal(); }, 700);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `HTTP Status: ${res.status}`;
+          statusBox.className = 'p-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 text-xs font-mono leading-relaxed';
+          statusBox.innerHTML = `<strong>Validasi Gagal:</strong> ${errMsg}`;
+        }
+      } catch (err) {
+        statusBox.className = 'p-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 text-xs font-mono';
+        statusBox.innerText = `Error jaringan: ${err.message}`;
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Simpan & Gunakan';
+      }
     }
 
     function clearStoredApiKey() {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('gemini_api_key');
       appState.apiKey = '';
-      updateApiKeyDisplay();
+      updateApiKeyUI(false);
+      document.getElementById('modalApiKeyInput').value = '';
       showToast('Kunci API dihapus');
-      closeApiKeyModal();
     }
 
-    let scene, cameraRigPerspective, renderer;
-    let cameraGroup, cameraBodyMesh, frustumConeMesh, lookAtLine;
-    let orbitRingMesh, elevationArcMesh, targetDummyMesh;
-    let subjectArchetypeGroup, gridHelper;
-    let isDragging3D = false;
-    let previousMousePosition = { x: 0, y: 0 };
-    let canvasContainer;
-
-    function initThreeCameraSimulator() {
-      canvasContainer = document.getElementById('viewportCanvasContainer');
-      const canvas = document.getElementById('camera3dCanvas');
-      const width = canvasContainer.clientWidth || 500;
-      const height = canvasContainer.clientHeight || 340;
-
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x08080C);
-
-      cameraRigPerspective = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-      cameraRigPerspective.position.set(5.5, 4.5, 6.5);
-      cameraRigPerspective.lookAt(0, 1.2, 0);
-
-      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-      scene.add(ambientLight);
-
-      const dirLight = new THREE.DirectionalLight(0x00F0FF, 0.8);
-      dirLight.position.set(5, 10, 7);
-      scene.add(dirLight);
-
-      const pinkLight = new THREE.DirectionalLight(0xFF007A, 0.5);
-      pinkLight.position.set(-5, 6, -5);
-      scene.add(pinkLight);
-
-      gridHelper = new THREE.GridHelper(14, 28, 0x00F0FF, 0x1C1C26);
-      scene.add(gridHelper);
-
-      buildSubjectAndTargetIndicator();
-      buildCameraObjectRig();
-      buildOrbitGuideRings();
-
-      window.addEventListener('resize', onWindowResize);
-      setupViewportTouchAndMouseControls();
-
-      updateCameraRigTransform();
-      animateThree();
-    }
-
-    function buildSubjectAndTargetIndicator() {
-      const targetGeo = new THREE.SphereGeometry(0.12, 16, 16);
-      const targetMat = new THREE.MeshBasicMaterial({ color: 0x00FF88, wireframe: true });
-      targetDummyMesh = new THREE.Mesh(targetGeo, targetMat);
-      targetDummyMesh.position.set(0, appState.camera.targetHeight, 0);
-      scene.add(targetDummyMesh);
-
-      const ringGeo = new THREE.RingGeometry(0.5, 0.55, 32);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0x00FF88, side: THREE.DoubleSide, opacity: 0.5, transparent: true });
-      const floorRing = new THREE.Mesh(ringGeo, ringMat);
-      floorRing.rotation.x = Math.PI / 2;
-      floorRing.position.y = 0.01;
-      scene.add(floorRing);
-
-      subjectArchetypeGroup = new THREE.Group();
-      scene.add(subjectArchetypeGroup);
-      render3DSubjectArchetype('person');
-    }
-
-    function render3DSubjectArchetype(type, customTextureUrl = null) {
-      if (!subjectArchetypeGroup) return;
-      while(subjectArchetypeGroup.children.length > 0) {
-        subjectArchetypeGroup.remove(subjectArchetypeGroup.children[0]);
-      }
-
-      if (customTextureUrl) {
-        const loader = new THREE.TextureLoader();
-        loader.load(customTextureUrl, (tex) => {
-          const planeGeo = new THREE.PlaneGeometry(1.6, 1.6);
-          const planeMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
-          const refPlane = new THREE.Mesh(planeGeo, planeMat);
-          refPlane.position.set(0, 1.0, 0);
-          subjectArchetypeGroup.add(refPlane);
-        });
-        return;
-      }
-
-      switch (type) {
-        case 'product': {
-          const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.65, 0.3, 32), new THREE.MeshStandardMaterial({ color: 0x1A1A24 }));
-          pedestal.position.y = 0.15;
-          subjectArchetypeGroup.add(pedestal);
-          const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0x00F0FF, roughness: 0.1 }));
-          bottle.position.y = 0.7;
-          subjectArchetypeGroup.add(bottle);
-          break;
-        }
-        case 'food': {
-          const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.5, 0.1, 32), new THREE.MeshStandardMaterial({ color: 0xEEEEEE }));
-          plate.position.y = 0.05;
-          subjectArchetypeGroup.add(plate);
-          const dome = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: 0xFF7A00, wireframe: true }));
-          dome.position.y = 0.1;
-          subjectArchetypeGroup.add(dome);
-          break;
-        }
-        case 'automotive': {
-          const carBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.45, 2.4), new THREE.MeshStandardMaterial({ color: 0xFF007A }));
-          carBody.position.y = 0.4;
-          subjectArchetypeGroup.add(carBody);
-          break;
-        }
-        case 'architecture': {
-          const tower = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.6, 1.0), new THREE.MeshStandardMaterial({ color: 0x00F0FF, wireframe: true }));
-          tower.position.y = 1.3;
-          subjectArchetypeGroup.add(tower);
-          break;
-        }
-        case 'person':
-        default: {
-          const texCanvas = document.createElement('canvas');
-          texCanvas.width = 256; texCanvas.height = 512;
-          const ctx = texCanvas.getContext('2d');
-          ctx.fillStyle = 'rgba(18, 18, 23, 0.75)';
-          ctx.strokeStyle = '#00F0FF'; ctx.lineWidth = 4;
-          ctx.beginPath(); ctx.arc(128, 90, 42, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(70, 170); ctx.quadraticCurveTo(128, 140, 186, 170); ctx.lineTo(195, 330); ctx.lineTo(61, 330); ctx.closePath(); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = '#00FF88'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center'; ctx.fillText('SUBJECT', 128, 240);
-          const tex = new THREE.CanvasTexture(texCanvas);
-          const plane = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 2.0), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }));
-          plane.position.set(0, 1.0, 0);
-          subjectArchetypeGroup.add(plane);
-          break;
-        }
-      }
-    }
-
-    function changeSubjectArchetype(type) {
-      if (type === 'auto' && appState.references.length > 0) {
-        render3DSubjectArchetype('custom', appState.references[0].dataUrl);
-        return;
-      }
-      render3DSubjectArchetype(type === 'auto' ? 'person' : type);
-    }
-
-    function buildCameraObjectRig() {
-      cameraGroup = new THREE.Group();
-      cameraBodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.45), new THREE.MeshStandardMaterial({ color: 0x00F0FF, metalness: 0.8 }));
-      cameraGroup.add(cameraBodyMesh);
-
-      const lensMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.25, 24), new THREE.MeshStandardMaterial({ color: 0x111116 }));
-      lensMesh.rotation.x = Math.PI / 2;
-      lensMesh.position.z = -0.3;
-      cameraGroup.add(lensMesh);
-
-      const coneGeo = new THREE.ConeGeometry(0.6, 1.4, 4, 1, true);
-      coneGeo.rotateX(-Math.PI / 2);
-      frustumConeMesh = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0xFF7A00, wireframe: true, transparent: true, opacity: 0.6 }));
-      frustumConeMesh.position.z = -0.9;
-      cameraGroup.add(frustumConeMesh);
-
-      const lineMat = new THREE.LineDashedMaterial({ color: 0xFF7A00, dashSize: 0.2, gapSize: 0.1 });
-      const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -3)]);
-      lookAtLine = new THREE.Line(lineGeo, lineMat);
-      cameraGroup.add(lookAtLine);
-
-      scene.add(cameraGroup);
-    }
-
-    function buildOrbitGuideRings() {
-      const orbitGeo = new THREE.BufferGeometry();
-      const points = [];
-      for (let i = 0; i <= 64; i++) {
-        const theta = (i / 64) * Math.PI * 2;
-        points.push(new THREE.Vector3(Math.cos(theta), 0, Math.sin(theta)));
-      }
-      orbitGeo.setFromPoints(points);
-      orbitRingMesh = new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x00FF88, transparent: true, opacity: 0.45 }));
-      scene.add(orbitRingMesh);
-
-      const arcGeo = new THREE.BufferGeometry();
-      const arcPoints = [];
-      for (let i = -32; i <= 32; i++) {
-        const phi = (i / 32) * (Math.PI / 2);
-        arcPoints.push(new THREE.Vector3(0, Math.sin(phi), Math.cos(phi)));
-      }
-      arcGeo.setFromPoints(arcPoints);
-      elevationArcMesh = new THREE.Line(arcGeo, new THREE.LineBasicMaterial({ color: 0xFF007A, transparent: true, opacity: 0.6 }));
-      scene.add(elevationArcMesh);
-    }
-
-    function updateCameraRigTransform() {
-      const c = appState.camera;
-      const targetPos = new THREE.Vector3(0, c.targetHeight, 0);
-
-      const phi = THREE.MathUtils.degToRad(90 - c.elevation);
-      const theta = THREE.MathUtils.degToRad(c.azimuth);
-      const radius = c.distance;
-
-      const x = radius * Math.sin(phi) * Math.sin(theta);
-      const y = radius * Math.cos(phi) + c.cameraHeight;
-      const z = radius * Math.sin(phi) * Math.cos(theta);
-
-      cameraGroup.position.set(x, y, z);
-      cameraGroup.lookAt(targetPos);
-      cameraGroup.rotateZ(THREE.MathUtils.degToRad(c.roll));
-
-      const fovRad = THREE.MathUtils.degToRad(c.fov);
-      const coneScale = Math.tan(fovRad / 2) * 1.5;
-      frustumConeMesh.scale.set(coneScale, coneScale, 1.2);
-
-      orbitRingMesh.scale.set(radius, 1, radius);
-      orbitRingMesh.position.set(0, c.targetHeight, 0);
-
-      elevationArcMesh.scale.set(radius, radius, radius);
-      elevationArcMesh.position.set(0, c.targetHeight, 0);
-      elevationArcMesh.rotation.y = THREE.MathUtils.degToRad(c.azimuth);
-
-      targetDummyMesh.position.copy(targetPos);
-    }
-
-    function setupViewportTouchAndMouseControls() {
-      const canvas = document.getElementById('camera3dCanvas');
-
-      canvas.addEventListener('mousedown', (e) => {
-        isDragging3D = true;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-      });
-
-      window.addEventListener('mouseup', () => isDragging3D = false);
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging3D) return;
-        const deltaX = e.clientX - previousMousePosition.x;
-        const deltaY = e.clientY - previousMousePosition.y;
-
-        let newAzimuth = Math.round(appState.camera.azimuth + deltaX * 0.7);
-        let newElevation = Math.round(appState.camera.elevation - deltaY * 0.5);
-
-        if (newAzimuth > 180) newAzimuth = -180 + (newAzimuth - 180);
-        if (newAzimuth < -180) newAzimuth = 180 + (newAzimuth + 180);
-        newElevation = Math.max(-89, Math.min(89, newElevation));
-
-        appState.camera.azimuth = newAzimuth;
-        appState.camera.elevation = newElevation;
-        syncCameraUIFromState();
-        previousMousePosition = { x: e.clientX, y: e.clientY };
+    function createGeminiRequest(endpointPath, payload) {
+      const key = appState.apiKey;
+      const url = `https://generativelanguage.googleapis.com/v1beta/${endpointPath}?key=${encodeURIComponent(key)}`;
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
+        },
+        body: JSON.stringify(payload)
       });
     }
 
-    function onWindowResize() {
-      if (!canvasContainer || !cameraRigPerspective || !renderer) return;
-      const w = canvasContainer.clientWidth;
-      const h = canvasContainer.clientHeight;
-      cameraRigPerspective.aspect = w / h;
-      cameraRigPerspective.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    }
-
-    function animateThree() {
-      requestAnimationFrame(animateThree);
-      if (targetDummyMesh) targetDummyMesh.rotation.y += 0.01;
-      renderer.render(scene, cameraRigPerspective);
-    }
-
-    function resetCameraToDefault() {
-      appState.camera.azimuth = 0;
-      appState.camera.elevation = 20;
-      appState.camera.distance = 2.5;
-      appState.camera.roll = 0;
-      appState.camera.fov = 54;
-      appState.camera.focalLength = 35;
-      appState.camera.cameraHeight = 1.6;
-      appState.camera.targetHeight = 1.2;
-      appState.camera.aperture = 'f/2.8';
-      syncCameraUIFromState();
-      showToast('Camera Rig Reset');
-    }
-
-    function toggleGridWireframe() {
-      if (!gridHelper) return;
-      gridHelper.visible = !gridHelper.visible;
-      document.getElementById('btnToggleGrid').innerText = `Grid: ${gridHelper.visible ? 'On' : 'Off'}`;
-    }
-
-    function setupInputEventListeners() {
-      const bind = (id, key) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('input', (e) => {
-          appState.camera[key] = parseFloat(e.target.value);
-          if (key === 'fov') {
-            const rad = THREE.MathUtils.degToRad(appState.camera.fov);
-            appState.camera.focalLength = Math.round(18 / Math.tan(rad / 2));
-          } else if (key === 'focalLength') {
-            const rad = 2 * Math.atan(18 / appState.camera.focalLength);
-            appState.camera.fov = Math.round(THREE.MathUtils.radToDeg(rad));
-          }
-          syncCameraUIFromState();
-        });
-      };
-
-      bind('sliderAzimuth', 'azimuth');
-      bind('sliderElevation', 'elevation');
-      bind('sliderDistance', 'distance');
-      bind('sliderRoll', 'roll');
-      bind('sliderFov', 'fov');
-      bind('sliderFocalLength', 'focalLength');
-      bind('sliderCamHeight', 'cameraHeight');
-      bind('sliderTargetHeight', 'targetHeight');
-      bind('sliderFocusDistance', 'focusDistance');
-
-      document.getElementById('dofToggle').addEventListener('change', (e) => {
-        appState.camera.dofEnabled = e.target.checked;
-        syncCameraUIFromState();
-      });
-
-      renderPresetsCatalog();
-    }
-
-    function syncCameraUIFromState() {
-      const c = appState.camera;
-      document.getElementById('sliderAzimuth').value = c.azimuth;
-      document.getElementById('sliderElevation').value = c.elevation;
-      document.getElementById('sliderDistance').value = c.distance;
-      document.getElementById('sliderRoll').value = c.roll;
-      document.getElementById('sliderFov').value = c.fov;
-      document.getElementById('sliderFocalLength').value = c.focalLength;
-      document.getElementById('sliderCamHeight').value = c.cameraHeight;
-      document.getElementById('sliderTargetHeight').value = c.targetHeight;
-      document.getElementById('sliderFocusDistance').value = c.focusDistance;
-      document.getElementById('dofToggle').checked = c.dofEnabled;
-
-      document.getElementById('valAzimuth').innerText = `${c.azimuth}°`;
-      document.getElementById('valElevation').innerText = `${c.elevation}°`;
-      document.getElementById('valDistance').innerText = `${c.distance}x`;
-      document.getElementById('valRoll').innerText = `${c.roll}°`;
-      document.getElementById('valFov').innerText = `${c.fov}°`;
-      document.getElementById('valFocalLength').innerText = `${c.focalLength}mm`;
-      document.getElementById('valCamHeight').innerText = `${c.cameraHeight}m`;
-      document.getElementById('valTargetHeight').innerText = `${c.targetHeight}m`;
-      document.getElementById('valFocusDistance').innerText = `${c.focusDistance}m`;
-      document.getElementById('valAperture').innerText = c.aperture;
-
-      document.getElementById('hudAzimuth').innerText = `${c.azimuth}°`;
-      document.getElementById('hudElevation').innerText = `${c.elevation}°`;
-      document.getElementById('hudDistance').innerText = `${c.distance}x`;
-      document.getElementById('hudFov').innerText = `${c.fov}°`;
-      document.getElementById('hudLens').innerText = `${c.focalLength}mm`;
-      document.getElementById('hudFocus').innerText = `${c.focusDistance}m`;
-
-      updateCameraRigTransform();
-      updateStructuredCameraPrompt();
-    }
-
-    function setAperture(fStop) {
-      appState.camera.aperture = fStop;
-      document.querySelectorAll('.ap-btn').forEach(btn => {
-        btn.className = btn.innerText === fStop
-          ? 'ap-btn text-[11px] font-mono py-1 rounded bg-accentPink/20 border border-accentPink text-white transition'
-          : 'ap-btn text-[11px] font-mono py-1 rounded bg-panel border border-panelBorder hover:border-accentPink text-gray-300 transition';
-      });
-      syncCameraUIFromState();
-    }
-
-    function setAspectRatio(ratio) {
-      appState.composition.aspectRatio = ratio;
-      document.getElementById('aspectRatioLabel').innerText = `${ratio} Ratio`;
-      document.querySelectorAll('.ratio-btn').forEach(btn => {
-        btn.className = (btn.getAttribute('data-ratio') === ratio || btn.innerText === ratio)
-          ? 'ratio-btn py-1.5 rounded-lg text-xs font-mono bg-accentOrange text-black font-bold shadow-md shadow-accentOrange/30 transition'
-          : 'ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder hover:border-gray-500 text-gray-300 transition';
-      });
-      showToast(`Aspect Ratio: ${ratio}`);
-    }
-
-    function buildCameraDescriptionStrings() {
-      const c = appState.camera;
-      let azm = c.azimuth > 150 || c.azimuth < -150 ? "back view" : c.azimuth > 45 ? "right profile" : c.azimuth < -45 ? "left profile" : "front view";
-      let elv = c.elevation > 70 ? "top-down bird's-eye view" : c.elevation > 25 ? "high angle shot" : c.elevation < -20 ? "low angle hero shot" : "eye-level shot";
-      let human = `${c.activePreset || 'Custom'}: ${azm}, ${elv}, ${c.focalLength}mm lens, ${c.aperture} aperture.`;
-      let structured = `<camera>\n  <preset>${c.activePreset}</preset>\n  <elevation>${c.elevation}°</elevation>\n  <azimuth>${c.azimuth}°</azimuth>\n  <lens>${c.focalLength}mm</lens>\n  <aperture>${c.aperture}</aperture>\n</camera>`;
-      return { humanReadable: human, structuredTag: structured };
-    }
-
-    function updateStructuredCameraPrompt() {
-      const { structuredTag, humanReadable } = buildCameraDescriptionStrings();
-      document.getElementById('cameraDescriptionBox').value = structuredTag;
-      document.getElementById('humanCameraDescription').innerText = humanReadable;
-    }
-
-    function toggleStrictNovelView(enabled) {
-      appState.strictSubjectConsistency = enabled;
-      showToast(enabled ? 'Mode Konsistensi Subjek 100% Aktif' : 'Mode Kreatif Bebas');
-    }
-
-    function injectMatrixToPrompt() {
-      const sub = document.getElementById('matrixSubject').value.trim();
-      const surf = document.getElementById('matrixSurface').value;
-      const light = document.getElementById('matrixLighting').value;
-      const mood = document.getElementById('matrixMood').value.trim();
-      const input = document.getElementById('mainPromptInput');
-
-      let arr = [];
-      if (sub) arr.push(sub);
-      if (surf && !surf.includes('None')) arr.push(`placed on ${surf}`);
-      if (mood) arr.push(mood);
-      arr.push(light);
-
-      input.value = (input.value.trim() ? input.value.trim() + ', ' : '') + arr.join(', ');
-      showToast('Matrix values injected!');
-    }
-
-    function applyModePreset(mode) {
-      switch(mode) {
-        case 'PRODUCT': applyPresetByName('Product 45° Pedestal'); break;
-        case 'FOOD': applyPresetByName('Food Hero 45°'); break;
-        case 'AUTOMOTIVE': applyPresetByName('Automotive 3/4 Dynamic'); break;
-        case 'ARCHITECTURE': applyPresetByName('Architecture Tilt-Shift'); break;
-        case 'JEWELRY': applyPresetByName('Jewelry Macro Luxury'); break;
-        case 'CINEMATIC': applyPresetByName('Cinematic'); break;
-      }
-    }
-
+    /* GENERATION DENGAN PRIORITAS GEMINI-2.5-FLASH-IMAGE (KUOTA FREE AKTIF) */
     async function executeImageGeneration() {
       if (appState.isGenerating) return;
 
-      const userPrompt = document.getElementById('mainPromptInput').value.trim();
+      if (!appState.apiKey) {
+        showToast('⚠️ Masukkan Google AI Studio API Key terlebih dahulu.');
+        openApiKeyModal();
+        return;
+      }
+
+      const promptInput = document.getElementById('mainPromptInput');
+      const userPrompt = promptInput.value.trim();
+
       if (!userPrompt && appState.references.length === 0) {
-        showToast('Tulis deskripsi atau unggah foto referensi.');
-        document.getElementById('mainPromptInput').focus();
+        showToast('Ketik deskripsi prompt atau unggah gambar referensi.');
+        promptInput.focus();
         return;
       }
 
@@ -1477,86 +735,65 @@
 
       const c = appState.camera;
       const ratio = appState.composition.aspectRatio;
-      const { structuredTag, humanReadable } = buildCameraDescriptionStrings();
-      const photoMode = document.getElementById('photographyMode').value;
+      const cameraDirective = `Camera Angle: Azimuth ${c.azimuth}°, Elevation ${c.elevation}°, Zoom ${c.distance}x, Focal Length ${c.focalLength}mm, Roll ${c.roll}°.`;
+      const fullPrompt = `${userPrompt || 'Cinematic composition'}, ${cameraDirective}, photorealistic, 4k ultra detailed, studio lighting.`;
 
-      let fullPrompt = `Cinematic ${photoMode} Photography:\n${userPrompt || 'A dramatic scene'}\nCamera Trajectory: ${humanReadable}\n${structuredTag}\nAspect Ratio: ${ratio}, photorealistic, studio lighting, hyper detailed, 8k.`;
+      const validApiRatio = ["1:1", "3:4", "4:3", "9:16", "16:9"].includes(ratio) ? ratio : "16:9";
 
-      updateProgressStage('Menyiapkan koordinat 3D & otentikasi AI Studio...', 25);
-
-      // Model priority list untuk fallback otomatis jika free tier limit (429 limit 0)
+      // DAFTAR MODEL DENGAN 2.5 DI URUTAN PERTAMA
       const modelsToTry = [
         'gemini-2.5-flash-image',
-        'imagen-3.0-generate-002',
+        'gemini-3.1-flash-image-preview',
         'gemini-3.1-flash-image'
       ];
 
       let generatedImgUrl = null;
-      let usedModel = modelsToTry[0];
+      let lastError = null;
 
       for (let modelName of modelsToTry) {
         try {
-          updateProgressStage(`Memanggil Google AI Studio (${modelName})...`, 50);
-          usedModel = modelName;
+          updateProgressStage(`Merender via ${modelName}...`, 45);
+          document.getElementById('activeEngineBadge').innerText = modelName;
 
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
-          
           let parts = [{ text: fullPrompt }];
           appState.references.forEach(ref => {
             parts.push({
-              inlineData: { mimeType: ref.mimeType, data: ref.base64Data }
+              inlineData: {
+                mimeType: ref.mimeType,
+                data: ref.base64Data
+              }
             });
           });
 
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': appState.apiKey
-            },
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: parts }],
-              generationConfig: {
-                responseModalities: ['IMAGE'],
-                imageConfig: { aspectRatio: ["1:1","3:4","4:3","9:16","16:9"].includes(ratio) ? ratio : "16:9" }
-              }
-            })
-          });
+          const payload = {
+            contents: [{ role: 'user', parts: parts }],
+            generationConfig: {
+              responseModalities: ['IMAGE'],
+              imageConfig: { aspectRatio: validApiRatio }
+            }
+          };
 
-          if (res.ok) {
-            const data = await res.json();
-            const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-            if (part && part.inlineData?.data) {
-              generatedImgUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-              break; // Sukses! Keluar dari loop fallback
-            }
-          } else {
-            const errData = await res.json().catch(() => ({}));
-            console.warn(`Model ${modelName} gagal:`, res.status, errData);
-            
-            // Jika terkena kuota 0 (ResourceExhausted 429), lanjutkan loop fallback ke model berikutnya
-            if (res.status === 429 || res.status === 404) {
-              document.getElementById('quotaWarningBanner').classList.remove('hidden');
-              document.getElementById('quotaWarningMsg').innerText = `Limit kuota model ${modelName} tercapai. Mencoba model alternatif...`;
-              continue;
-            } else {
-              break;
-            }
+          const response = await createGeminiRequest(`models/${modelName}:generateContent`, payload);
+          const result = await response.json();
+
+          const imgPart = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+          if (imgPart && imgPart.inlineData?.data) {
+            generatedImgUrl = `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+            break;
+          } else if (result.error) {
+            lastError = result.error.message;
+            console.warn(`Model ${modelName} error:`, result.error);
           }
         } catch (e) {
-          console.warn(`Error connecting to ${modelName}:`, e);
+          lastError = e.message;
         }
       }
 
-      updateProgressStage('Menyelesaikan proses render...', 90);
-
       if (generatedImgUrl) {
-        displayGeneratedResult(generatedImgUrl, fullPrompt);
-        showToast(`🎉 Render selesai dengan sukses via ${usedModel}!`);
+        displayResultImage(generatedImgUrl);
+        showToast('🎉 Gambar berhasil digenerate!');
       } else {
-        // Fallback procedural simulation jika seluruh model cloud terkena kuota 0
-        fallbackProceduralRender(fullPrompt);
-        showToast('⚠️ Kuota AI Studio Free-tier habis. Menampilkan simulasi procedural rig.');
+        showToast(lastError ? `Gagal: ${lastError}` : 'Gagal merender gambar.');
       }
 
       appState.isGenerating = false;
@@ -1564,220 +801,188 @@
     }
 
     async function enhanceUserPromptWithAI() {
-      const input = document.getElementById('mainPromptInput');
-      const current = input.value.trim();
+      if (!appState.apiKey) {
+        openApiKeyModal();
+        return;
+      }
+      const promptInput = document.getElementById('mainPromptInput');
+      const current = promptInput.value.trim();
       const btn = document.getElementById('btnEnhancePrompt');
       btn.innerText = 'Enhancing...';
       btn.disabled = true;
 
-      const { humanReadable } = buildCameraDescriptionStrings();
-      const light = document.getElementById('matrixLighting').value;
-
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': appState.apiKey
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `Expand into a rich cinematic Midjourney prompt: "${current || 'Cinematic visual'}". Camera: ${humanReadable}. Lighting: ${light}. Output only the prompt.` }] }]
-          })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            input.value = text.trim();
-            showToast('✨ Prompt diperluas dengan Gemini!');
-          }
-        } else {
-          // Offline rule-based fallback
-          input.value = `${current || 'Cinematic scene'}, ${humanReadable}, ${light}, 8k UHD, photorealistic rendering, volumetric atmosphere.`;
-          showToast('✨ Prompt diperluas dengan parameter kamera studio!');
+        const payload = {
+          contents: [{ parts: [{ text: `Expand this concept into an ultra-detailed, cinematic Midjourney/Gemini prompt with lighting and textures: "${current || 'A heroic scene'}"` }] }]
+        };
+        const res = await createGeminiRequest('models/gemini-2.5-flash:generateContent', payload);
+        const data = await res.json();
+        const enhanced = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (enhanced) {
+          promptInput.value = enhanced.trim();
+          showToast('✨ Prompt berhasil diperluas!');
         }
       } catch (err) {
-        input.value = `${current || 'Cinematic scene'}, ${humanReadable}, ${light}, 8k UHD, photorealistic rendering.`;
-        showToast('✨ Prompt diperluas offline!');
+        showToast('Gagal memperluas prompt.');
       } finally {
         btn.innerText = '✨ Enhance Prompt';
         btn.disabled = false;
       }
     }
 
-    function interpretNaturalCameraCommand() {
-      const input = document.getElementById('cameraNaturalInput');
-      const q = input.value.toLowerCase();
-      if (!q) return;
-
-      if (q.includes('flat lay') || q.includes('top down') || q.includes('makanan') || q.includes('dari atas')) {
-        applyPresetByName('Flat Lay / Knolling');
-      } else if (q.includes('mobil') || q.includes('car')) {
-        applyPresetByName('Automotive 3/4 Dynamic');
-      } else if (q.includes('produk') || q.includes('botol') || q.includes('parfum')) {
-        applyPresetByName('Product 45° Pedestal');
-      } else if (q.includes('bawah') || q.includes('low')) {
-        applyPresetByName('Low Angle');
-      } else if (q.includes('dekat') || q.includes('close')) {
-        applyPresetByName('Close Up');
-      } else {
-        showToast('Perintah sudut kamera diterapkan!');
-      }
-    }
-
-    function displayGeneratedResult(imgUrl, prompt) {
+    function displayResultImage(url) {
       document.getElementById('emptyOutputPlaceholder').classList.add('hidden');
-      document.getElementById('activeOutputContainer').classList.remove('hidden');
-      document.getElementById('outputFooterBar').classList.remove('hidden');
+      const container = document.getElementById('activeOutputContainer');
+      const img = document.getElementById('mainResultImg');
+      const footer = document.getElementById('outputFooterBar');
+      const download = document.getElementById('downloadBtn');
 
-      const wrapper = document.getElementById('imageRenderWrapper');
-      const primaryRef = appState.references.length > 0 ? appState.references[0].dataUrl : null;
+      img.src = url;
+      download.href = url;
+      container.classList.remove('hidden');
+      footer.classList.remove('hidden');
 
-      appState.currentOutput = {
-        url: imgUrl,
-        prompt: prompt,
-        referenceUrl: primaryRef,
-        cameraSnapshot: { ...appState.camera },
-        aspectRatio: appState.composition.aspectRatio
-      };
+      appState.history.unshift({ url, date: new Date().toLocaleTimeString() });
+      document.getElementById('historyCountBadge').innerText = appState.history.length;
+    }
 
-      if (primaryRef) {
-        document.getElementById('comparisonToggleContainer').classList.remove('hidden');
-        renderSplitSlider(wrapper, primaryRef, imgUrl);
+    function toggleGenerationUI(inProgress) {
+      const btn = document.getElementById('btnGenerate');
+      const box = document.getElementById('generationProgressBox');
+      const statusText = document.getElementById('systemStatusText');
+
+      if (inProgress) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        box.classList.remove('hidden');
+        statusText.innerText = 'Rendering...';
       } else {
-        document.getElementById('comparisonToggleContainer').classList.add('hidden');
-        wrapper.innerHTML = `<img src="${imgUrl}" class="max-h-[550px] w-auto rounded-xl object-contain shadow-2xl border border-white/10">`;
-      }
-
-      saveCurrentToHistory(false);
-    }
-
-    function renderSplitSlider(container, refUrl, genUrl) {
-      container.innerHTML = `
-        <div class="relative w-full max-w-2xl select-none overflow-hidden rounded-xl border border-panelBorder shadow-2xl mx-auto h-[440px]" id="splitSliderBox">
-          <img src="${genUrl}" class="absolute inset-0 w-full h-full object-contain bg-black/80">
-          <span class="absolute bottom-3 right-3 text-[10px] font-mono bg-black/80 px-2 py-1 rounded text-accentCyan z-10">GENERATED</span>
-
-          <div id="splitForeground" class="absolute inset-0 overflow-hidden w-1/2 border-r-2 border-accentCyan z-20">
-            <img src="${refUrl}" class="absolute top-0 left-0 w-full h-full object-contain bg-black/80 max-w-none">
-            <span class="absolute bottom-3 left-3 text-[10px] font-mono bg-black/80 px-2 py-1 rounded text-accentPink">REFERENCE</span>
-          </div>
-
-          <div id="splitHandle" class="absolute top-0 bottom-0 left-1/2 -ml-3.5 w-7 flex items-center justify-center cursor-ew-resize z-30">
-            <div class="w-7 h-7 rounded-full bg-accentCyan text-black flex items-center justify-center font-bold text-xs border border-white">↔</div>
-          </div>
-        </div>
-      `;
-
-      const box = document.getElementById('splitSliderBox');
-      const fg = document.getElementById('splitForeground');
-      const handle = document.getElementById('splitHandle');
-      let isMoving = false;
-
-      const onMove = (e) => {
-        if (!isMoving) return;
-        const rect = box.getBoundingClientRect();
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        let x = Math.max(0, Math.min(rect.width, clientX - rect.left));
-        let pct = (x / rect.width) * 100;
-        fg.style.width = `${pct}%`;
-        handle.style.left = `${pct}%`;
-      };
-
-      box.addEventListener('mousedown', () => isMoving = true);
-      window.addEventListener('mouseup', () => isMoving = false);
-      window.addEventListener('mousemove', onMove);
-    }
-
-    function toggleComparisonMode(mode) {
-      if (!appState.currentOutput) return;
-      const wrapper = document.getElementById('imageRenderWrapper');
-      if (mode === 'result') {
-        wrapper.innerHTML = `<img src="${appState.currentOutput.url}" class="max-h-[550px] w-auto rounded-xl object-contain shadow-2xl">`;
-        document.getElementById('btnCompResult').className = 'px-2.5 py-1 rounded bg-accentCyan text-black font-semibold';
-        document.getElementById('btnCompSplit').className = 'px-2.5 py-1 rounded bg-panelBorder text-gray-300';
-      } else {
-        renderSplitSlider(wrapper, appState.currentOutput.referenceUrl, appState.currentOutput.url);
-        document.getElementById('btnCompResult').className = 'px-2.5 py-1 rounded bg-panelBorder text-gray-300';
-        document.getElementById('btnCompSplit').className = 'px-2.5 py-1 rounded bg-accentCyan text-black font-semibold';
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        box.classList.add('hidden');
+        statusText.innerText = 'Ready';
       }
     }
 
-    function fallbackProceduralRender(promptText) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280; canvas.height = 720;
-      const ctx = canvas.getContext('2d');
-      const grad = ctx.createLinearGradient(0, 0, 1280, 720);
-      grad.addColorStop(0, '#0a0a14'); grad.addColorStop(1, '#08080C');
-      ctx.fillStyle = grad; ctx.fillRect(0, 0, 1280, 720);
-
-      ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
-      ctx.lineWidth = 1.5;
-      const horizonY = 360 + (appState.camera.elevation * 2);
-      for (let i = 0; i <= 1280; i += 40) {
-        ctx.beginPath(); ctx.moveTo(i, 720); ctx.lineTo(640 + (appState.camera.azimuth * 3), horizonY); ctx.stroke();
-      }
-
-      ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 640, 1280, 80);
-      ctx.fillStyle = '#00F0FF'; ctx.font = 'bold 16px monospace';
-      ctx.fillText(`ERIODR CAMERA AI — PRESET: [${appState.camera.activePreset}]`, 25, 672);
-      ctx.font = '12px monospace'; ctx.fillStyle = '#AAA';
-      ctx.fillText(`LENS: ${appState.camera.focalLength}mm | APERTURE: ${appState.camera.aperture} | AZM: ${appState.camera.azimuth}° | ELV: ${appState.camera.elevation}°`, 25, 698);
-
-      displayGeneratedResult(canvas.toDataURL('image/png'), promptText);
+    function updateProgressStage(label, percent) {
+      document.getElementById('progressStatusLabel').innerText = label;
+      document.getElementById('progressPercent').innerText = `${percent}%`;
+      document.getElementById('progressBarFill').style.width = `${percent}%`;
     }
 
-    function handleReferenceFileUpload(event) {
-      const files = Array.from(event.target.files || []);
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          appState.references.push({
-            id: 'ref_' + Date.now(),
-            name: file.name,
-            dataUrl: e.target.result,
-            base64Data: e.target.result.split(',')[1],
-            mimeType: file.type
-          });
-          renderRefs();
-        };
-        reader.readAsDataURL(file);
+    let scene, cameraRig, renderer, cameraGroup, gridHelper;
+
+    function initThree() {
+      const container = document.getElementById('viewportCanvasContainer');
+      const canvas = document.getElementById('camera3dCanvas');
+      const w = container.clientWidth || 400;
+      const h = container.clientHeight || 300;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x08080C);
+
+      cameraRig = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+      cameraRig.position.set(5.5, 4.5, 6.5);
+      cameraRig.lookAt(0, 1.2, 0);
+
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      const amb = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(amb);
+      const dir = new THREE.DirectionalLight(0x00F0FF, 0.8);
+      dir.position.set(5, 10, 7);
+      scene.add(dir);
+
+      gridHelper = new THREE.GridHelper(14, 28, 0x00F0FF, 0x1C1C26);
+      scene.add(gridHelper);
+
+      cameraGroup = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.45), new THREE.MeshStandardMaterial({ color: 0x00F0FF }));
+      cameraGroup.add(body);
+      scene.add(cameraGroup);
+
+      const dummy = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshBasicMaterial({ color: 0x00FF88, wireframe: true }));
+      dummy.position.set(0, 1.2, 0);
+      scene.add(dummy);
+
+      updateRigPosition();
+
+      let isDragging = false;
+      let prevPos = { x: 0, y: 0 };
+      canvas.addEventListener('mousedown', (e) => { isDragging = true; prevPos = { x: e.clientX, y: e.clientY }; });
+      window.addEventListener('mouseup', () => isDragging = false);
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - prevPos.x;
+        const dy = e.clientY - prevPos.y;
+        appState.camera.azimuth = Math.round(appState.camera.azimuth + dx * 0.7);
+        appState.camera.elevation = Math.max(-89, Math.min(89, Math.round(appState.camera.elevation - dy * 0.5)));
+        syncUI();
+        prevPos = { x: e.clientX, y: e.clientY };
       });
-    }
 
-    function handleDragOver(e) { e.preventDefault(); document.getElementById('dropZoneContainer').classList.add('border-accentPink'); }
-    function handleDragLeave(e) { e.preventDefault(); document.getElementById('dropZoneContainer').classList.remove('border-accentPink'); }
-    function handleDropFile(e) {
-      e.preventDefault();
-      document.getElementById('dropZoneContainer').classList.remove('border-accentPink');
-      if (e.dataTransfer.files) handleReferenceFileUpload({ target: { files: e.dataTransfer.files } });
-    }
-
-    function renderRefs() {
-      const g = document.getElementById('referencesGallery');
-      const bar = document.getElementById('referenceOptionsBar');
-      const banner = document.getElementById('strictConsistencyBanner');
-      g.innerHTML = '';
-
-      if (appState.references.length === 0) {
-        bar.classList.add('hidden');
-        banner.classList.add('hidden');
-        return;
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, cameraRig);
       }
-      bar.classList.remove('hidden');
-      banner.classList.remove('hidden');
+      animate();
+    }
 
-      appState.references.forEach((r, idx) => {
-        const d = document.createElement('div');
-        d.className = 'bg-background border border-panelBorder rounded-xl p-2 flex items-center space-x-2';
-        d.innerHTML = `
-          <img src="${r.dataUrl}" class="w-12 h-12 rounded object-cover">
-          <span class="text-[11px] truncate flex-1 text-white">${r.name}</span>
-          <button onclick="appState.references.splice(${idx}, 1); renderRefs();" class="text-red-400 text-xs hover:text-white">✕</button>
-        `;
-        g.appendChild(d);
+    function updateRigPosition() {
+      const c = appState.camera;
+      const phi = THREE.MathUtils.degToRad(90 - c.elevation);
+      const theta = THREE.MathUtils.degToRad(c.azimuth);
+      const r = c.distance;
+
+      const x = r * Math.sin(phi) * Math.sin(theta);
+      const y = r * Math.cos(phi) + c.cameraHeight;
+      const z = r * Math.sin(phi) * Math.cos(theta);
+
+      cameraGroup.position.set(x, y, z);
+      cameraGroup.lookAt(0, c.targetHeight, 0);
+      cameraGroup.rotateZ(THREE.MathUtils.degToRad(c.roll));
+    }
+
+    function syncUI() {
+      const c = appState.camera;
+      document.getElementById('sliderAzimuth').value = c.azimuth;
+      document.getElementById('sliderElevation').value = c.elevation;
+      document.getElementById('sliderDistance').value = c.distance;
+      document.getElementById('sliderRoll').value = c.roll;
+      document.getElementById('sliderFocalLength').value = c.focalLength;
+      document.getElementById('sliderFov').value = c.fov;
+      document.getElementById('sliderCamHeight').value = c.cameraHeight;
+      document.getElementById('sliderTargetHeight').value = c.targetHeight;
+
+      document.getElementById('valAzimuth').innerText = `${c.azimuth}°`;
+      document.getElementById('valElevation').innerText = `${c.elevation}°`;
+      document.getElementById('valDistance').innerText = `${c.distance}x`;
+      document.getElementById('valRoll').innerText = `${c.roll}°`;
+      document.getElementById('valFocalLength').innerText = `${c.focalLength}mm`;
+      document.getElementById('valFov').innerText = `${c.fov}°`;
+      document.getElementById('valCamHeight').innerText = `${c.cameraHeight}m`;
+      document.getElementById('valTargetHeight').innerText = `${c.targetHeight}m`;
+
+      document.getElementById('hudAzimuth').innerText = `${c.azimuth}°`;
+      document.getElementById('hudElevation').innerText = `${c.elevation}°`;
+      document.getElementById('hudDistance').innerText = `${c.distance}x`;
+      document.getElementById('hudLens').innerText = `${c.focalLength}mm`;
+      document.getElementById('hudFov').innerText = `${c.fov}°`;
+
+      updateRigPosition();
+    }
+
+    function setAperture(val) {
+      appState.camera.aperture = val;
+      document.getElementById('valAperture').innerText = val;
+      document.querySelectorAll('.ap-btn').forEach(btn => {
+        if (btn.innerText === val) {
+          btn.className = 'ap-btn text-[11px] font-mono py-1 rounded bg-accentPink/20 border border-accentPink text-white transition';
+        } else {
+          btn.className = 'ap-btn text-[11px] font-mono py-1 rounded bg-panel border border-panelBorder hover:border-accentPink text-gray-300 transition';
+        }
       });
     }
 
@@ -1788,135 +993,88 @@
       appState.camera.azimuth = p.azimuth;
       appState.camera.elevation = p.elevation;
       appState.camera.distance = p.distance;
-      appState.camera.fov = p.fov;
       appState.camera.focalLength = p.focalLength;
-      if (p.aperture) appState.camera.aperture = p.aperture;
-      if (p.recommendedRatio) setAspectRatio(p.recommendedRatio);
-      if (p.recommendedSubject) changeSubjectArchetype(p.recommendedSubject);
-
-      syncCameraUIFromState();
+      appState.camera.fov = p.fov;
+      syncUI();
       showToast(`Preset: ${p.name}`);
     }
 
-    function renderPresetsCatalog() {
-      const g = document.getElementById('fullPresetsGrid');
-      if (!g) return;
+    function resetCameraToDefault() {
+      appState.camera.azimuth = 0;
+      appState.camera.elevation = 20;
+      appState.camera.distance = 2.5;
+      appState.camera.roll = 0;
+      appState.camera.focalLength = 35;
+      appState.camera.fov = 54;
+      appState.camera.cameraHeight = 1.6;
+      appState.camera.targetHeight = 1.2;
+      syncUI();
+    }
+
+    function toggleGridWireframe() {
+      gridHelper.visible = !gridHelper.visible;
+      document.getElementById('btnToggleGrid').innerText = `Grid: ${gridHelper.visible ? 'On' : 'Off'}`;
+    }
+
+    function setAspectRatio(ratio) {
+      appState.composition.aspectRatio = ratio;
+      document.querySelectorAll('.ratio-btn').forEach(btn => {
+        if (btn.getAttribute('data-ratio') === ratio) {
+          btn.className = 'ratio-btn py-1.5 rounded-lg text-xs font-mono bg-accentOrange text-black font-bold';
+        } else {
+          btn.className = 'ratio-btn py-1.5 rounded-lg text-xs font-mono bg-background border border-panelBorder text-gray-300';
+        }
+      });
+      showToast(`Aspect Ratio: ${ratio}`);
+    }
+
+    function handleReferenceFileUpload(e) {
+      const files = e.target.files;
+      if (!files.length) return;
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const dataUrl = evt.target.result;
+          appState.references.push({
+            name: file.name,
+            dataUrl: dataUrl,
+            base64Data: dataUrl.split(',')[1],
+            mimeType: file.type
+          });
+          renderRefs();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderRefs() {
+      const g = document.getElementById('referencesGallery');
+      const banner = document.getElementById('strictConsistencyBanner');
       g.innerHTML = '';
-      CAMERA_PRESETS.forEach(p => {
+
+      if (appState.references.length > 0) {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+
+      appState.references.forEach((r, idx) => {
         const d = document.createElement('div');
-        d.className = 'bg-panel border border-panelBorder hover:border-accentCyan/60 rounded-xl p-4 space-y-2 cursor-pointer transition';
-        d.onclick = () => { applyPresetByName(p.name); switchMainTab('workspace'); };
+        d.className = 'bg-background border border-panelBorder rounded-xl p-2 flex items-center space-x-2';
         d.innerHTML = `
-          <div class="flex justify-between items-center"><span class="text-xs font-bold text-white">${p.name}</span><span class="text-[10px] text-accentCyan">${p.category}</span></div>
-          <p class="text-[10px] text-gray-400 line-clamp-2">${p.promptDirective}</p>
-          <div class="text-[11px] font-mono text-gray-400">AZM: ${p.azimuth}° | ELV: ${p.elevation}° | ${p.focalLength}mm</div>
+          <img src="${r.dataUrl}" class="w-12 h-12 rounded object-cover">
+          <span class="text-[11px] truncate flex-1 text-white">${r.name}</span>
+          <button onclick="appState.references.splice(${idx}, 1); renderRefs();" class="text-red-400 text-xs">✕</button>
         `;
         g.appendChild(d);
       });
     }
 
-    function saveCurrentToHistory(notify = true) {
-      if (!appState.currentOutput) return;
-      appState.history.unshift({ ...appState.currentOutput, timestamp: new Date().toLocaleTimeString() });
-      document.getElementById('historyCountBadge').innerText = appState.history.length;
-      renderHistoryPanel();
-      if (notify) showToast('Tersimpan di render history');
-    }
-
-    function renderHistoryPanel() {
-      const g = document.getElementById('historyCardsGrid');
-      const empty = document.getElementById('emptyHistoryNotice');
-      g.innerHTML = '';
-      if (appState.history.length === 0) { empty.classList.remove('hidden'); return; }
-      empty.classList.add('hidden');
-
-      appState.history.forEach((h, idx) => {
-        const c = document.createElement('div');
-        c.className = 'bg-panel border border-panelBorder rounded-xl overflow-hidden p-3 space-y-2';
-        c.innerHTML = `
-          <img src="${h.url}" class="h-40 w-full object-cover rounded-lg cursor-pointer" onclick="openOutputFullscreenCustom('${h.url}')">
-          <p class="text-xs text-gray-300 truncate">${h.prompt.split('\n')[0]}</p>
-          <div class="flex justify-between text-[10px] text-accentCyan font-mono">
-            <span>${h.aspectRatio}</span><span>${h.timestamp}</span>
-          </div>
-        `;
-        g.appendChild(c);
-      });
-    }
-
-    function clearHistoryLog() {
-      appState.history = [];
-      document.getElementById('historyCountBadge').innerText = '0';
-      renderHistoryPanel();
-      showToast('History dibersihkan');
-    }
-
     function switchMainTab(tab) {
-      ['Workspace', 'Presets', 'History', 'Settings'].forEach(t => {
-        const v = document.getElementById(`view${t}`);
-        const btn = document.getElementById(`navTab${t}`);
-        const isTarget = t.toLowerCase() === tab.toLowerCase();
-        if (v) v.classList.toggle('hidden', !isTarget);
-        if (btn) btn.className = isTarget 
-          ? 'px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-panelBorder/80 transition-all flex items-center space-x-1.5'
-          : 'px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center space-x-1.5';
+      ['workspace', 'presets', 'history', 'settings'].forEach(t => {
+        const v = document.getElementById(`view${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (v) v.classList.toggle('hidden', t !== tab);
       });
-      if (tab === 'workspace') setTimeout(onWindowResize, 50);
-    }
-
-    function toggleGenerationUI(inProgress) {
-      const btn = document.getElementById('btnGenerate');
-      const box = document.getElementById('generationProgressBox');
-      const st = document.getElementById('systemStatusText');
-      if (inProgress) {
-        btn.disabled = true; btn.classList.add('opacity-50');
-        box.classList.remove('hidden'); st.innerText = 'Rendering...';
-      } else {
-        btn.disabled = false; btn.classList.remove('opacity-50');
-        box.classList.add('hidden'); st.innerText = 'Ready';
-      }
-    }
-
-    function updateProgressStage(label, pct) {
-      document.getElementById('progressStatusLabel').innerText = label;
-      document.getElementById('progressPercent').innerText = `${pct}%`;
-      document.getElementById('progressBarFill').style.width = `${pct}%`;
-    }
-
-    function copyCameraDescription() {
-      const tag = document.getElementById('cameraDescriptionBox').value;
-      const t = document.createElement('textarea'); t.value = tag; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-      showToast('Camera Tag copied');
-    }
-
-    function copyCameraJson() {
-      const t = document.createElement('textarea'); t.value = JSON.stringify(appState.camera, null, 2); document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-      showToast('Camera JSON copied');
-    }
-
-    function copyGeneratedPrompt() {
-      if (!appState.currentOutput) return;
-      const t = document.createElement('textarea'); t.value = appState.currentOutput.prompt; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-      showToast('Prompt copied');
-    }
-
-    function downloadActiveOutput() {
-      if (!appState.currentOutput) return;
-      const a = document.createElement('a'); a.href = appState.currentOutput.url; a.download = `eriodr_render_${Date.now()}.png`; a.click();
-    }
-
-    function openOutputFullscreen() {
-      if (!appState.currentOutput) return;
-      openOutputFullscreenCustom(appState.currentOutput.url);
-    }
-
-    function openOutputFullscreenCustom(url) {
-      document.getElementById('fullscreenImageEl').src = url;
-      document.getElementById('fullscreenModal').classList.remove('hidden');
-    }
-
-    function closeOutputFullscreen() {
-      document.getElementById('fullscreenModal').classList.add('hidden');
     }
 
     function showToast(msg) {
@@ -1925,22 +1083,22 @@
       t.className = 'toast-item bg-panel border border-panelBorder text-white text-xs font-mono px-4 py-2.5 rounded-xl shadow-2xl border-l-4 border-l-accentCyan';
       t.innerText = msg;
       c.appendChild(t);
-      setTimeout(() => t.remove(), 3200);
+      setTimeout(() => { t.remove(); }, 3000);
     }
 
     window.addEventListener('load', () => {
-      initApiKeyManagement();
-      initThreeCameraSimulator();
-      setupInputEventListeners();
-      syncCameraUIFromState();
-
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          closeOutputFullscreen();
-          closeApiKeyModal();
-        }
+      initApiKey();
+      initThree();
+      ['sliderAzimuth', 'sliderElevation', 'sliderDistance', 'sliderRoll', 'sliderFocalLength', 'sliderFov', 'sliderCamHeight', 'sliderTargetHeight'].forEach(id => {
+        document.getElementById(id).addEventListener('input', (e) => {
+          const key = id.replace('slider', '').toLowerCase();
+          if (key === 'focallength') appState.camera.focalLength = parseFloat(e.target.value);
+          else if (key === 'camheight') appState.camera.cameraHeight = parseFloat(e.target.value);
+          else if (key === 'targetheight') appState.camera.targetHeight = parseFloat(e.target.value);
+          else appState.camera[key] = parseFloat(e.target.value);
+          syncUI();
+        });
       });
-      console.log('ERIODR CAMERA AI Studio restored successfully.');
     });
   </script>
 </body>
